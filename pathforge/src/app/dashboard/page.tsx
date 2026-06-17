@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { QuestCard } from "@/components/quests";
 
 interface Quest {
   id: string;
@@ -10,7 +11,10 @@ interface Quest {
   type: "main" | "side" | "daily";
   difficulty: number;
   estimatedMinutes: number;
-  status: "pending" | "in_progress" | "completed" | "skipped";
+  description: string;
+  whyItMatters: string;
+  acceptanceCriteria: string[];
+  status: "pending" | "in_progress" | "completed" | "skipped" | "postponed";
   dueDate: string;
 }
 
@@ -21,6 +25,9 @@ const mockQuests: Quest[] = [
     type: "main",
     difficulty: 2,
     estimatedMinutes: 60,
+    description: "为你的第一个 AI 产品定义目标用户、痛点和 MVP。",
+    whyItMatters: "产品开发型路线需要先形成清晰的产品判断。",
+    acceptanceCriteria: ["写出目标用户", "写出核心痛点", "写出 MVP 功能列表"],
     status: "pending",
     dueDate: "2026-06-18",
   },
@@ -30,6 +37,9 @@ const mockQuests: Quest[] = [
     type: "daily",
     difficulty: 1,
     estimatedMinutes: 30,
+    description: "学习 React 组件的基础知识和最佳实践。",
+    whyItMatters: "React 是前端开发的基础技能。",
+    acceptanceCriteria: ["完成一个简单的组件", "理解组件生命周期", "掌握状态管理"],
     status: "completed",
     dueDate: "2026-06-18",
   },
@@ -39,6 +49,9 @@ const mockQuests: Quest[] = [
     type: "side",
     difficulty: 1,
     estimatedMinutes: 20,
+    description: "阅读一篇关于 AI 产品设计的文章并总结要点。",
+    whyItMatters: "了解行业最佳实践和设计趋势。",
+    acceptanceCriteria: ["文章已阅读", "要点已总结", "一个洞察已记录"],
     status: "pending",
     dueDate: "2026-06-18",
   },
@@ -48,6 +61,9 @@ const mockQuests: Quest[] = [
     type: "main",
     difficulty: 2,
     estimatedMinutes: 45,
+    description: "创建 Next.js 项目并配置基本依赖。",
+    whyItMatters: "项目骨架是开发的基础。",
+    acceptanceCriteria: ["项目能运行", "依赖已配置", "基本结构已建立"],
     status: "in_progress",
     dueDate: "2026-06-19",
   },
@@ -57,6 +73,9 @@ const mockQuests: Quest[] = [
     type: "daily",
     difficulty: 1,
     estimatedMinutes: 15,
+    description: "记录今天学到的知识和心得。",
+    whyItMatters: "记录和反思有助于巩固学习。",
+    acceptanceCriteria: ["笔记已写", "重点已标注", "下一步已规划"],
     status: "pending",
     dueDate: "2026-06-19",
   },
@@ -71,23 +90,107 @@ const mockAttributes = {
 };
 
 export default function DashboardPage() {
-  const [quests, setQuests] = useState(mockQuests);
+  const [quests, setQuests] = useState<Quest[]>(mockQuests);
+  const [attributes, setAttributes] = useState(mockAttributes);
   const [energyLevel, setEnergyLevel] = useState(70);
 
-  const handleCompleteQuest = (questId: string) => {
-    setQuests((prev) =>
-      prev.map((q) =>
-        q.id === questId ? { ...q, status: "completed" } : q
-      )
-    );
+  const handleCompleteQuest = async (questId: string) => {
+    try {
+      const response = await fetch(`/api/quests/${questId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "completed",
+          energyLevel,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update quest status
+        setQuests((prev) =>
+          prev.map((q) =>
+            q.id === questId ? { ...q, status: "completed" } : q
+          )
+        );
+
+        // Update attributes
+        setAttributes((prev) => ({
+          focus: prev.focus + data.attributeChanges.focus,
+          execution: prev.execution + data.attributeChanges.execution,
+          creativity: prev.creativity + data.attributeChanges.creativity,
+          learning: prev.learning + data.attributeChanges.learning,
+          resilience: prev.resilience + data.attributeChanges.resilience,
+        }));
+      }
+    } catch (error) {
+      console.error("Error completing quest:", error);
+      // Update locally anyway
+      setQuests((prev) =>
+        prev.map((q) =>
+          q.id === questId ? { ...q, status: "completed" } : q
+        )
+      );
+    }
   };
 
-  const handleSkipQuest = (questId: string) => {
-    setQuests((prev) =>
-      prev.map((q) =>
-        q.id === questId ? { ...q, status: "skipped" } : q
-      )
-    );
+  const handleSkipQuest = async (questId: string) => {
+    try {
+      await fetch(`/api/quests/${questId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "skipped",
+          energyLevel,
+        }),
+      });
+
+      setQuests((prev) =>
+        prev.map((q) =>
+          q.id === questId ? { ...q, status: "skipped" } : q
+        )
+      );
+    } catch (error) {
+      console.error("Error skipping quest:", error);
+      setQuests((prev) =>
+        prev.map((q) =>
+          q.id === questId ? { ...q, status: "skipped" } : q
+        )
+      );
+    }
+  };
+
+  const handlePostponeQuest = async (questId: string) => {
+    try {
+      await fetch(`/api/quests/${questId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "postponed",
+          energyLevel,
+        }),
+      });
+
+      setQuests((prev) =>
+        prev.map((q) =>
+          q.id === questId ? { ...q, status: "postponed" } : q
+        )
+      );
+    } catch (error) {
+      console.error("Error postponing quest:", error);
+      setQuests((prev) =>
+        prev.map((q) =>
+          q.id === questId ? { ...q, status: "postponed" } : q
+        )
+      );
+    }
   };
 
   const completedCount = quests.filter((q) => q.status === "completed").length;
@@ -168,71 +271,13 @@ export default function DashboardPage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Today&apos;s Quests</h2>
               <div className="space-y-4">
                 {quests.map((quest) => (
-                  <div
+                  <QuestCard
                     key={quest.id}
-                    className={`p-4 rounded-lg border ${
-                      quest.status === "completed"
-                        ? "bg-green-50 border-green-200"
-                        : quest.status === "in_progress"
-                        ? "bg-blue-50 border-blue-200"
-                        : "bg-white border-gray-200"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className={`px-2 py-1 text-xs rounded-full ${
-                              quest.type === "main"
-                                ? "bg-purple-100 text-purple-700"
-                                : quest.type === "side"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-green-100 text-green-700"
-                            }`}
-                          >
-                            {quest.type}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            Difficulty: {quest.difficulty}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {quest.estimatedMinutes} min
-                          </span>
-                        </div>
-                        <h3
-                          className={`mt-2 font-medium ${
-                            quest.status === "completed"
-                              ? "text-gray-500 line-through"
-                              : "text-gray-900"
-                          }`}
-                        >
-                          {quest.title}
-                        </h3>
-                      </div>
-                      <div className="flex space-x-2">
-                        {quest.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleCompleteQuest(quest.id)}
-                            >
-                              Complete
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSkipQuest(quest.id)}
-                            >
-                              Skip
-                            </Button>
-                          </>
-                        )}
-                        {quest.status === "completed" && (
-                          <span className="text-green-600 text-sm font-medium">Done</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    quest={quest}
+                    onComplete={handleCompleteQuest}
+                    onSkip={handleSkipQuest}
+                    onPostpone={handlePostponeQuest}
+                  />
                 ))}
               </div>
             </div>
@@ -244,7 +289,7 @@ export default function DashboardPage() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Attributes</h2>
               <div className="space-y-3">
-                {Object.entries(mockAttributes).map(([key, value]) => (
+                {Object.entries(attributes).map(([key, value]) => (
                   <div key={key}>
                     <div className="flex justify-between mb-1">
                       <span className="text-sm font-medium text-gray-700 capitalize">
