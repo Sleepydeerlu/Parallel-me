@@ -1,9 +1,34 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-const mockReview = {
+interface PathAlignment {
+  pathId: string;
+  pathName: string;
+  score: number;
+}
+
+interface Review {
+  weekStart: string;
+  weekEnd: string;
+  completionRate: number;
+  completedQuests: number;
+  skippedQuests: number;
+  summary: string;
+  attributeChanges: {
+    focus: number;
+    execution: number;
+    creativity: number;
+    learning: number;
+    resilience: number;
+  };
+  pathAlignment: PathAlignment[];
+  recommendations: string[];
+}
+
+const mockReview: Review = {
   weekStart: "2026-06-17",
   weekEnd: "2026-06-23",
   completionRate: 0.71,
@@ -30,6 +55,42 @@ const mockReview = {
 };
 
 export default function ReviewPage() {
+  const [review, setReview] = useState<Review>(mockReview);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Try to fetch review from API
+    const fetchReview = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/reviews", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            goalId: "goal_001",
+            weekStart: "2026-06-17",
+            weekEnd: "2026-06-23",
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.review) {
+            setReview(data.review);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch review:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReview();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
