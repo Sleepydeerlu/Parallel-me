@@ -1386,7 +1386,7 @@ AI 基于历史反馈生成新路线
 
 ---
 
-## 10. 页面设计
+## 11. 页面设计
 
 ### 9.1 Landing Page
 
@@ -1561,7 +1561,7 @@ AI 基于历史反馈生成新路线
 
 ---
 
-## 11. 核心数据结构
+## 12. 核心数据结构
 
 ### 10.1 UserProfile
 
@@ -1756,7 +1756,7 @@ AI 基于历史反馈生成新路线
 
 ---
 
-## 12. AI 生成流程
+## 13. AI 生成流程
 
 ### 11.1 总体 Pipeline
 
@@ -1881,7 +1881,7 @@ Reflection and Replanning
 
 ---
 
-## 13. Prompt 设计
+## 14. Prompt 设计
 
 ### 12.1 System Prompt
 
@@ -1998,7 +1998,7 @@ Warm, honest, practical. Do not shame the user.
 
 ---
 
-## 14. 规则系统设计
+## 15. 规则系统设计
 
 ### 13.1 任务生成规则
 
@@ -2079,7 +2079,7 @@ pathAlignment = completedPathRelatedQuests / totalCompletedQuests * 100
 
 ---
 
-## 15. 技术架构
+## 16. 技术架构
 
 ### 14.1 推荐技术栈
 
@@ -2189,7 +2189,7 @@ pathforge/
 
 ---
 
-## 16. 数据库设计
+## 17. 数据库设计
 
 ### 15.1 users
 
@@ -2333,7 +2333,7 @@ pathforge/
 
 ---
 
-## 17. API 设计
+## 18. API 设计
 
 ### 16.1 POST /api/goals
 
@@ -2472,7 +2472,7 @@ pathforge/
 
 ---
 
-## 18. 前端组件设计
+## 19. 前端组件设计
 
 ### 17.1 GoalInputForm
 
@@ -2570,7 +2570,7 @@ type PathCardProps = {
 
 ---
 
-## 19. 视觉设计方向
+## 20. 视觉设计方向
 
 ### 18.1 整体风格
 
@@ -2638,7 +2638,7 @@ Turn it into quests.
 
 ---
 
-## 20. 安全与伦理边界
+## 21. 安全与伦理边界
 
 ### 19.1 不做确定性预测
 
@@ -2694,7 +2694,7 @@ Turn it into quests.
 
 ---
 
-## 21. MVP 开发路线图
+## 22. MVP 开发路线图
 
 ### 20.1 V0.1：单机可用原型
 
@@ -2990,7 +2990,7 @@ Turn it into quests.
 
 ---
 
-## 22. 第一周开发计划
+## 23. 第一周开发计划
 
 ### Day 1：项目初始化
 
@@ -3087,7 +3087,7 @@ Turn it into quests.
 
 ---
 
-## 23. 验收标准
+## 24. 验收标准
 
 ### 22.1 功能验收
 
@@ -3137,7 +3137,7 @@ MVP 必须满足：
 
 ---
 
-## 24. 开源策略
+## 25. 开源策略
 
 ### 23.1 README 标语
 
@@ -3202,7 +3202,7 @@ An open-source life simulator that turns your possible futures into quests.
 
 ---
 
-## 25. 商业化可能性
+## 26. 商业化可能性
 
 虽然第一阶段开源，但长期可以有商业化方向。
 
@@ -3410,7 +3410,7 @@ An open-source life simulator that turns your possible futures into quests.
 
 ---
 
-## 26. 运营策略
+## 27. 运营策略
 
 ### 26.1 用户获取策略
 
@@ -3744,7 +3744,7 @@ An open-source life simulator that turns your possible futures into quests.
 
 ---
 
-## 27. 未来扩展方向
+## 28. 未来扩展方向
 
 ### 25.1 Mood OS 融合
 
@@ -3800,7 +3800,7 @@ An open-source life simulator that turns your possible futures into quests.
 
 ---
 
-## 27. 编程 Agent 执行提示词
+## 29. 编程 Agent 执行提示词
 
 可以将以下提示词交给编程 Agent：
 
@@ -3850,7 +3850,7 @@ MVP 约束：
 
 ---
 
-## 29. 产品路线图
+## 30. 产品路线图
 
 ### 29.1 产品发展时间线
 
