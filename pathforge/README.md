@@ -1,91 +1,124 @@
-# PathForge
+<div align="center">
 
-Simulate your possible futures. Choose one. Turn it into quests.
+# 🎮 PathForge
 
-PathForge is an AI-driven life path simulation and RPG growth system that helps users transform major choices, long-term goals, and daily tasks into actionable growth paths.
+### Simulate your possible futures. Choose one. Turn it into quests.
 
-## Why
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?logo=tailwindcss)](https://tailwindcss.com/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-Most productivity tools only care about "what to do today?" But what users really struggle with is:
+[![GitHub Stars](https://img.shields.io/github/stars/Sleepydeerlu/Parallel-me?style=social)](https://github.com/Sleepydeerlu/Parallel-me/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Sleepydeerlu/Parallel-me?style=social)](https://github.com/Sleepydeerlu/Parallel-me/network/members)
 
-- Why am I doing these things?
-- Where will these tasks take me?
-- Am I doing things consistent with who I want to become?
+<br />
 
-PathForge's value is putting tasks back into the context of life paths.
+[🚀 Get Started](#quickstart) · [🎮 Demo](#demo) · [📖 Documentation](#features) · [🤝 Contributing](#contributing)
 
-## Demo
+</div>
+
+---
+
+## 🤔 Why PathForge?
+
+Most productivity tools only ask: **"What do you need to do today?"**
+
+But what you really need to know is:
+
+> - **Where am I going?**
+> - **What paths are available?**
+> - **Which path should I choose?**
+> - **What should I do right now?**
+
+**PathForge** is the first open-source tool that combines **AI-powered life simulation** with **RPG-style quest systems** to help you navigate life's biggest decisions.
+
+## ✨ Features
+
+<table>
+  <tr>
+    <td width="50%">
+      <h3>🎯 Parallel Path Simulation</h3>
+      <p>Input your goal or dilemma, and AI generates multiple life paths with different approaches. Compare tradeoffs, risks, and rewards.</p>
+    </td>
+    <td width="50%">
+      <h3>⚔️ RPG Quest System</h3>
+      <p>Transform your chosen path into a 7-day quest map with daily tasks, difficulty levels, and acceptance criteria.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>📊 Attribute Tracking</h3>
+      <p>Track your growth across 5 core attributes: Focus, Execution, Learning, Creativity, and Resilience.</p>
+    </td>
+    <td width="50%">
+      <h3>📈 Weekly Reviews</h3>
+      <p>Get AI-powered weekly reviews with progress analysis, path alignment scores, and personalized recommendations.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🔋 Energy Management</h3>
+      <p>Adjust task difficulty based on your energy level. Low energy? Get lighter tasks. High energy? Take on boss quests!</p>
+    </td>
+    <td width="50%">
+      <h3>🔒 Privacy First</h3>
+      <p>Your data stays on your device. No account required. Open source and self-hostable.</p>
+    </td>
+  </tr>
+</table>
+
+## 🎮 Demo
 
 ### Example 1: College Student
 
-**Input:**
 ```
-我是一名大三学生。
+Input:
+"我是一名大三学生。
 我想一年内成为 AI 产品开发者。
 我纠结要不要考研。
-每周可投入 15 小时。
-我会一点 Python 和前端。
-```
+每周可投入 15 小时。"
 
-**Output:**
-- 3 parallel life paths (Research, Builder, Hybrid)
-- 7-day quest map for each path
-- Daily tasks with acceptance criteria
-- Weekly review and attribute tracking
+Output:
+├── 🎓 Research Path (稳健路线)
+│   └── Deep learning, academic papers, graduate school
+├── 🚀 Builder Path (激进路线)  
+│   └── Open source projects, portfolio building, job ready
+└── ⚖️ Hybrid Path (混合路线)
+    └── Balance research and practice
+```
 
 ### Example 2: Career Changer
 
-**Input:**
 ```
-我是一名后端工程师。
+Input:
+"我是一名后端工程师。
 我想转行做 AI 工程。
-我想在 6 个月内做出第一个 AI 产品。
+我想在 6 个月内做出第一个 AI 产品。"
+
+Output:
+├── 📚 Study Path (学习路线)
+│   └── Online courses, certifications, theoretical foundation
+├── 🔨 Build Path (实践路线)
+│   └── Hands-on projects, open source contributions
+└── 🎯 Focus Path (聚焦路线)
+    └── Specific AI domain, deep expertise
 ```
 
-**Output:**
-- Career transition paths
-- Skill development roadmap
-- Project-based learning quests
-
-## Features
-
-### Core Features
-
-- **Parallel Path Simulation**: Generate multiple life paths based on your goals
-- **RPG Growth System**: Track progress with attributes, skills, and achievements
-- **AI-Powered Quests**: Get concrete, actionable daily tasks
-- **Weekly Reviews**: Reflect on progress and adjust direction
-- **Energy Management**: Adjust task difficulty based on your energy level
-
-### Technical Features
-
-- **Local-First**: Your data stays on your device
-- **Privacy-Focused**: No account required for basic usage
-- **OpenAI-Compatible**: Use any OpenAI-compatible API
-- **Self-Hostable**: Deploy on your own infrastructure
-
-## How It Works
-
-1. **Input Your Goal**: Describe your current situation and what you want to achieve
-2. **Generate Paths**: AI generates 3 parallel life paths with different approaches
-3. **Choose a Path**: Select one path as your main quest line
-4. **Get Quests**: Receive a 7-day quest map with daily tasks
-5. **Track Progress**: Complete quests, gain attributes, and level up
-6. **Weekly Review**: Reflect on your progress and adjust direction
-
-## Quickstart
+## 🚀 Quickstart
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pathforge.git
-cd pathforge
+git clone https://github.com/Sleepydeerlu/Parallel-me.git
+cd Parallel-me/pathforge
 
 # Install dependencies
 npm install
@@ -97,9 +130,9 @@ cp .env.example .env.local
 npm run dev
 ```
 
-### Environment Variables
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-Create a `.env.local` file with the following variables:
+### Environment Variables
 
 ```env
 # OpenAI API Configuration
@@ -111,118 +144,153 @@ OPENAI_MODEL=gpt-4
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-### Using Your Own API Key
+## 🏗️ Architecture
 
-PathForge supports any OpenAI-compatible API. You can:
-
-1. Use OpenAI directly
-2. Use Azure OpenAI
-3. Use local models (like Ollama)
-4. Use other providers (like Anthropic, Google, etc.)
-
-## Configuration
-
-### Customizing the AI
-
-You can customize the AI behavior by modifying the prompt templates in `src/lib/prompts/`.
-
-### Customizing Attributes
-
-The attribute system can be customized in `src/lib/schemas/attribute.ts`.
-
-### Customizing Quest Types
-
-Quest types and their properties can be modified in `src/lib/schemas/quest.ts`.
-
-## Roadmap
-
-### V0.1: MVP (Current)
-
-- [x] Goal input and path generation
-- [x] Path comparison and selection
-- [x] 7-day quest map
-- [x] Quest completion and tracking
-- [x] Basic attribute system
-- [x] Weekly review
-
-### V0.2: Data Structure Stable
-
-- [ ] SQLite database support
-- [ ] Multi-goal management
-- [ ] Advanced skill tree
-- [ ] Path alignment analysis
-
-### V0.3: Open Source Release
-
-- [ ] Docker deployment
-- [ ] Environment variable configuration
-- [ ] Example user templates
-- [ ] Contributing guidelines
-
-### V1.0: Production Ready
-
-- [ ] User accounts
-- [ ] Cloud sync
-- [ ] Calendar integration
-- [ ] Data export
-- [ ] Mobile app
-
-## Privacy
-
-PathForge is designed with privacy in mind:
-
-- **Local-First**: Your data is stored locally by default
-- **No Tracking**: We don't track your usage
-- **Data Control**: You can export or delete your data at any time
-- **Open Source**: You can review the code to verify our privacy claims
-
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development
-
-```bash
-# Run tests
-npm test
-
-# Run linter
-npm run lint
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
+```
+pathforge/
+├── src/
+│   ├── app/
+│   │   ├── api/           # API routes
+│   │   ├── dashboard/     # Main dashboard
+│   │   ├── onboarding/    # Goal input flow
+│   │   ├── paths/         # Path selection
+│   │   ├── review/        # Weekly reviews
+│   │   └── timeline/      # Growth timeline
+│   ├── components/
+│   │   ├── layout/        # Layout components
+│   │   ├── paths/         # Path-related components
+│   │   ├── quests/        # Quest-related components
+│   │   └── ui/            # Reusable UI components
+│   └── lib/
+│       └── schemas/       # Zod schemas
+├── public/                # Static assets
+└── docs/                  # Documentation
 ```
 
-### Code Style
+## 🛠️ Tech Stack
 
-We use:
-- TypeScript for type safety
-- ESLint for code linting
-- Prettier for code formatting
-- Tailwind CSS for styling
+| Technology | Purpose |
+|------------|---------|
+| [Next.js 16](https://nextjs.org/) | React framework with App Router |
+| [TypeScript](https://www.typescriptlang.org/) | Type safety |
+| [Tailwind CSS](https://tailwindcss.com/) | Styling |
+| [shadcn/ui](https://ui.shadcn.com/) | UI components |
+| [Zod](https://zod.dev/) | Schema validation |
+| [Framer Motion](https://www.framer.com/motion/) | Animations |
+| [OpenAI API](https://platform.openai.com/) | AI capabilities |
 
-## License
+## 📖 API Reference
 
-MIT License - see [LICENSE](LICENSE) for details.
+### Generate Paths
 
-## Acknowledgments
+```http
+POST /api/paths
+Content-Type: application/json
+
+{
+  "identity": "大三学生",
+  "goal": "一年内成为 AI 产品开发者",
+  "dilemma": "纠结考研还是就业",
+  "timeHorizon": "12 months",
+  "weeklyHours": 15
+}
+```
+
+### Generate Quests
+
+```http
+POST /api/quests
+Content-Type: application/json
+
+{
+  "pathId": "path_001",
+  "pathName": "产品开发型路线",
+  "weeklyHours": 15
+}
+```
+
+### Update Quest Status
+
+```http
+PATCH /api/quests/{id}
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "reflection": "这个任务比想象中难，但我完成了初稿。",
+  "actualMinutes": 75,
+  "energyLevel": 60
+}
+```
+
+### Generate Weekly Review
+
+```http
+POST /api/reviews
+Content-Type: application/json
+
+{
+  "goalId": "goal_001",
+  "weekStart": "2026-06-17",
+  "weekEnd": "2026-06-23"
+}
+```
+
+## 🗺️ Roadmap
+
+- [x] **V0.1**: MVP with core features
+- [ ] **V0.2**: SQLite database support
+- [ ] **V0.3**: Docker deployment
+- [ ] **V1.0**: User accounts and cloud sync
+
+See the [open issues](https://github.com/Sleepydeerlu/Parallel-me/issues) for a full list of proposed features.
+
+## 🤝 Contributing
+
+We love contributions! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
+
+### Quick Start for Contributors
+
+```bash
+# Fork the repo
+# Clone your fork
+git clone https://github.com/your-username/Parallel-me.git
+
+# Create a branch
+git checkout -b feature/amazing-feature
+
+# Make your changes
+# Commit your changes
+git commit -m "feat: add amazing feature"
+
+# Push to your fork
+git push origin feature/amazing-feature
+
+# Open a Pull Request
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
 
 - [Next.js](https://nextjs.org/) - The React framework
 - [Tailwind CSS](https://tailwindcss.com/) - A utility-first CSS framework
 - [shadcn/ui](https://ui.shadcn.com/) - Re-usable components
-- [Zod](https://zod.dev/) - TypeScript-first schema validation
+- [Framer Motion](https://www.framer.com/motion/) - Animation library
 
-## Support
+## 📧 Contact
 
-- [GitHub Issues](https://github.com/yourusername/pathforge/issues)
-- [Discord Community](https://discord.gg/pathforge)
-- [Email Support](mailto:support@pathforge.dev)
+- GitHub: [@Sleepydeerlu](https://github.com/Sleepydeerlu)
+- Project: [Parallel-me](https://github.com/Sleepydeerlu/Parallel-me)
 
-## Contact
+---
 
-- [Twitter](https://twitter.com/pathforge)
-- [Website](https://pathforge.dev)
-- [Blog](https://blog.pathforge.dev)
+<div align="center">
+
+**[⬆ back to top](#-pathforge)**
+
+Made with ❤️ by the PathForge community
+
+</div>
