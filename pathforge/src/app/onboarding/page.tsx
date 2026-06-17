@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [formData, setFormData] = useState({
     identity: "",
     currentStage: "",
@@ -22,12 +23,39 @@ export default function OnboardingPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < 3) {
       setStep(step + 1);
     } else {
-      // Navigate to paths generation
-      router.push("/paths");
+      // Generate paths and navigate
+      setIsGenerating(true);
+      try {
+        const response = await fetch("/api/paths", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Store paths in sessionStorage for the paths page
+          sessionStorage.setItem("generatedPaths", JSON.stringify(data.paths));
+          sessionStorage.setItem("goalInput", JSON.stringify(formData));
+          router.push("/paths");
+        } else {
+          console.error("Failed to generate paths");
+          // Navigate anyway with mock data
+          router.push("/paths");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        // Navigate anyway with mock data
+        router.push("/paths");
+      } finally {
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -205,8 +233,8 @@ export default function OnboardingPage() {
           >
             Back
           </Button>
-          <Button onClick={handleNext}>
-            {step === 3 ? "Generate Paths" : "Next"}
+          <Button onClick={handleNext} disabled={isGenerating}>
+            {isGenerating ? "Generating..." : step === 3 ? "Generate Paths" : "Next"}
           </Button>
         </div>
       </div>

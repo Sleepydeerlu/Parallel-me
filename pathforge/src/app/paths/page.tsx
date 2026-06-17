@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -59,6 +59,22 @@ const mockPaths: Path[] = [
 export default function PathsPage() {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [paths, setPaths] = useState<Path[]>(mockPaths);
+
+  useEffect(() => {
+    // Try to load generated paths from sessionStorage
+    const storedPaths = sessionStorage.getItem("generatedPaths");
+    if (storedPaths) {
+      try {
+        const parsedPaths = JSON.parse(storedPaths);
+        if (Array.isArray(parsedPaths) && parsedPaths.length > 0) {
+          setPaths(parsedPaths);
+        }
+      } catch (error) {
+        console.error("Failed to parse stored paths:", error);
+      }
+    }
+  }, []);
 
   const handleSelectPath = (pathId: string) => {
     setSelectedPath(pathId);
@@ -92,7 +108,7 @@ export default function PathsPage() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-2 px-4">Dimension</th>
-                  {mockPaths.map((path) => (
+                  {paths.map((path) => (
                     <th key={path.id} className="text-left py-2 px-4">
                       {path.name}
                     </th>
@@ -137,7 +153,7 @@ export default function PathsPage() {
 
         {/* Path Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {mockPaths.map((path) => (
+          {paths.map((path) => (
             <div
               key={path.id}
               className={`bg-white rounded-lg shadow-sm p-6 cursor-pointer transition-all ${
