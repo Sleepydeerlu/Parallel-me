@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { PathCard, PathComparisonTable } from "@/components/paths";
 
 interface Path {
   id: string;
@@ -101,127 +102,17 @@ export default function PathsPage() {
         </div>
 
         {/* Comparison Table */}
-        {showComparison && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-8 overflow-x-auto">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Path Comparison</h2>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4">Dimension</th>
-                  {paths.map((path) => (
-                    <th key={path.id} className="text-left py-2 px-4">
-                      {path.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-2 px-4 font-medium">稳定性</td>
-                  <td className="py-2 px-4">高</td>
-                  <td className="py-2 px-4">中</td>
-                  <td className="py-2 px-4">中</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 px-4 font-medium">成长速度</td>
-                  <td className="py-2 px-4">中</td>
-                  <td className="py-2 px-4">高</td>
-                  <td className="py-2 px-4">中</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 px-4 font-medium">风险</td>
-                  <td className="py-2 px-4">低</td>
-                  <td className="py-2 px-4">中</td>
-                  <td className="py-2 px-4">中</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 px-4 font-medium">作品产出</td>
-                  <td className="py-2 px-4">低</td>
-                  <td className="py-2 px-4">高</td>
-                  <td className="py-2 px-4">中</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 font-medium">学术深度</td>
-                  <td className="py-2 px-4">高</td>
-                  <td className="py-2 px-4">中</td>
-                  <td className="py-2 px-4">中</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
+        {showComparison && <PathComparisonTable paths={paths} />}
 
         {/* Path Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {paths.map((path) => (
-            <div
+            <PathCard
               key={path.id}
-              className={`bg-white rounded-lg shadow-sm p-6 cursor-pointer transition-all ${
-                selectedPath === path.id
-                  ? "ring-2 ring-indigo-500 shadow-md"
-                  : "hover:shadow-md"
-              }`}
-              onClick={() => handleSelectPath(path.id)}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">{path.name}</h3>
-                {selectedPath === path.id && (
-                  <span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-sm rounded-full">
-                    Selected
-                  </span>
-                )}
-              </div>
-              <p className="text-gray-600 mb-4">{path.summary}</p>
-              
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Future Snapshot</h4>
-                <p className="text-sm text-gray-600">{path.futureSnapshot}</p>
-              </div>
-
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Benefits</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  {path.benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-green-500 mr-2">+</span>
-                      {benefit}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Costs & Risks</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  {path.costs.map((cost, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-red-500 mr-2">-</span>
-                      {cost}
-                    </li>
-                  ))}
-                  {path.risks.map((risk, index) => (
-                    <li key={`risk-${index}`} className="flex items-start">
-                      <span className="text-yellow-500 mr-2">!</span>
-                      {risk}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Required Skills</h4>
-                <div className="flex flex-wrap gap-2">
-                  {path.requiredSkills.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
+              path={path}
+              selected={selectedPath === path.id}
+              onSelect={handleSelectPath}
+            />
           ))}
         </div>
 
