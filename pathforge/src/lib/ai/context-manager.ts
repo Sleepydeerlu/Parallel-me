@@ -301,10 +301,12 @@ export function updateAttributes(
   changes: Record<string, number>
 ): DialogueContext {
   const newAttributes = { ...context.attributes };
+  const validKeys = Object.keys(newAttributes);
   
   for (const [key, value] of Object.entries(changes)) {
-    if (key in newAttributes) {
-      (newAttributes as any)[key] = Math.max(0, Math.min(100, (newAttributes as any)[key] + value));
+    if (validKeys.includes(key)) {
+      const attrKey = key as keyof typeof newAttributes;
+      newAttributes[attrKey] = Math.max(0, Math.min(100, newAttributes[attrKey] + value));
     }
   }
   

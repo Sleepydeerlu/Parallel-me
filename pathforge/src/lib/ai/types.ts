@@ -104,36 +104,3 @@ export const AIResponseSchema = z.object({
 });
 
 export type AIResponse = z.infer<typeof AIResponseSchema>;
-
-// 对话上下文
-export const DialogueContextSchema = z.object({
-  userId: z.string(),
-  messages: z.array(z.object({
-    role: z.enum(["user", "assistant"]),
-    content: z.string(),
-    timestamp: z.string(),
-  })),
-  currentScene: SceneSchema.optional(),
-  activePath: z.string().optional(),
-  attributes: z.object({
-    courage: z.number().default(10),
-    wisdom: z.number().default(10),
-    empathy: z.number().default(10),
-    creativity: z.number().default(10),
-    resilience: z.number().default(10),
-    communication: z.number().default(10),
-    execution: z.number().default(10),
-  }).default({
-    courage: 10,
-    wisdom: 10,
-    empathy: 10,
-    creativity: 10,
-    resilience: 10,
-    communication: 10,
-    execution: 10,
-  }),
-  unlockedPaths: z.array(z.string()).default([]),
-  activeQuests: z.array(DynamicQuestSchema).default([]),
-});
-
-export type DialogueContext = z.infer<typeof DialogueContextSchema>;

@@ -176,17 +176,20 @@ export async function generateAIResponse(
 }
 
 // 验证和标准化响应
-function validateAndNormalizeResponse(response: any): AIResponse {
+function validateAndNormalizeResponse(response: unknown): AIResponse {
+  const res = response as Record<string, unknown>;
   return {
-    narrative: response.narrative || "让我们继续探索吧。",
-    scene: response.scene || undefined,
-    actions: Array.isArray(response.actions) ? response.actions : [],
-    freeInputPlaceholder: response.freeInputPlaceholder || "告诉我你的想法...",
-    pathUnlocks: Array.isArray(response.pathUnlocks) ? response.pathUnlocks : [],
-    quests: Array.isArray(response.quests) ? response.quests : [],
-    attributeChanges: response.attributeChanges || {},
-    emotionalState: response.emotionalState || { primary: "neutral", intensity: 50 },
-    userProfileUpdates: response.userProfileUpdates || undefined,
+    narrative: typeof res.narrative === "string" ? res.narrative : "让我们继续探索吧。",
+    scene: res.scene as AIResponse["scene"],
+    actions: Array.isArray(res.actions) ? res.actions : [],
+    freeInputPlaceholder: typeof res.freeInputPlaceholder === "string" ? res.freeInputPlaceholder : "告诉我你的想法...",
+    pathUnlocks: Array.isArray(res.pathUnlocks) ? res.pathUnlocks : [],
+    quests: Array.isArray(res.quests) ? res.quests : [],
+    attributeChanges: (res.attributeChanges as AIResponse["attributeChanges"]) || {
+      courage: 0, wisdom: 0, empathy: 0, creativity: 0, resilience: 0, communication: 0, execution: 0,
+    },
+    emotionalState: (res.emotionalState as AIResponse["emotionalState"]) || { primary: "neutral", intensity: 50 },
+    userProfileUpdates: res.userProfileUpdates as AIResponse["userProfileUpdates"],
   };
 }
 
