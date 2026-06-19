@@ -95,6 +95,12 @@ export const AIResponseSchema = z.object({
     primary: "neutral",
     intensity: 50,
   }),
+  userProfileUpdates: z.object({
+    goals: z.array(z.string()).optional(),
+    fears: z.array(z.string()).optional(),
+    desires: z.array(z.string()).optional(),
+    values: z.array(z.string()).optional(),
+  }).optional(),
 });
 
 export type AIResponse = z.infer<typeof AIResponseSchema>;

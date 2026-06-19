@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import ChatInterface from "@/components/chat/chat-interface";
 import AttributePanel from "@/components/chat/attribute-panel";
 import PathMap from "@/components/chat/path-map";
@@ -21,9 +22,16 @@ interface Quest {
   description: string;
   difficulty: number;
   estimatedMinutes: number;
-  type: "main" | "side" | "hidden" | "emergency" | string;
+  type: string;
   status: "active" | "completed" | "failed" | "abandoned";
   acceptanceCriteria: string[];
+}
+
+interface ContextStats {
+  messageCount: number;
+  summaryCount: number;
+  pathCount: number;
+  questCount: number;
 }
 
 export default function PlayPage() {
@@ -40,19 +48,23 @@ export default function PlayPage() {
   const [paths, setPaths] = useState<Path[]>([]);
   const [activePathId, setActivePathId] = useState<string | undefined>();
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [contextStats, setContextStats] = useState<ContextStats | null>(null);
 
-  const handleAction = (actionId: string) => {
+  const handleAction = useCallback((actionId: string) => {
     console.log("Action:", actionId);
-  };
+  }, []);
 
-  const handleQuestAccept = (quest: Quest) => {
-    setQuests((prev) => [
-      ...prev,
-      { ...quest, status: "active" },
-    ]);
-  };
+  const handleQuestAccept = useCallback((quest: Quest) => {
+    setQuests((prev) => {
+      // 检查是否已存在
+      if (prev.some((q) => q.id === quest.id)) {
+        return prev;
+      }
+      return [...prev, quest];
+    });
+  }, []);
 
-  const handleQuestComplete = (questId: string) => {
+  const handleQuestComplete = useCallback((questId: string) => {
     setQuests((prev) =>
       prev.map((q) =>
         q.id === questId ? { ...q, status: "completed" } : q
@@ -64,11 +76,39 @@ export default function PlayPage() {
       ...prev,
       execution: prev.execution + 1,
     }));
-  };
+  }, []);
 
-  const handlePathClick = (pathId: string) => {
+  const handlePathUnlock = useCallback((path: { id: string; name: string; description: string }) => {
+    setPaths((prev) => {
+      // 检查是否已存在
+      if (prev.some((p) => p.id === path.id)) {
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          ...path,
+          status: "unlocked" as const,
+          progress: 0,
+        },
+      ];
+    });
+  }, []);
+
+  const handlePathClick = useCallback((pathId: string) => {
     setActivePathId(pathId);
-  };
+    setPaths((prev) =>
+      prev.map((p) =>
+        p.id === pathId
+          ? { ...p, status: "active" as const }
+          : { ...p, status: p.status === "active" ? "unlocked" as const : p.status }
+      )
+    );
+  }, []);
+
+  const handleContextUpdate = useCallback((stats: ContextStats) => {
+    setContextStats(stats);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-gray-900">
@@ -80,10 +120,20 @@ export default function PlayPage() {
             <span className="text-gray-400">|</span>
             <span className="text-gray-400 text-sm">探索无限可能</span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
+            {/* 上下文统计 */}
+            {contextStats && (
+              <div className="hidden sm:flex items-center space-x-2 text-xs text-gray-500">
+                <span>消息: {contextStats.messageCount}</span>
+                <span>•</span>
+                <span>路线: {contextStats.pathCount}</span>
+                <span>•</span>
+                <span>任务: {contextStats.questCount}</span>
+              </div>
+            )}
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className="text-gray-400 hover:text-white p-2"
+              className="text-gray-400 hover:text-white p-2 transition-colors"
             >
               {showSidebar ? "◀" : "▶"}
             </button>
@@ -98,12 +148,19 @@ export default function PlayPage() {
           <ChatInterface
             onAction={handleAction}
             onQuestAccept={handleQuestAccept}
+            onPathUnlock={handlePathUnlock}
+            onContextUpdate={handleContextUpdate}
           />
         </div>
 
         {/* 侧边栏 */}
-        {showSidebar && (
-          <div className="w-80 bg-gray-900 border-l border-gray-700 overflow-y-auto p-4 space-y-4">
+        <motion.div
+          initial={false}
+          animate={{ width: showSidebar ? 320 : 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-gray-900 border-l border-gray-700 overflow-hidden"
+        >
+          <div className="w-80 h-full overflow-y-auto p-4 space-y-4">
             <AttributePanel attributes={attributes} />
             <PathMap
               paths={paths}
@@ -114,8 +171,20 @@ export default function PlayPage() {
               quests={quests}
               onComplete={handleQuestComplete}
             />
+            
+            {/* 帮助信息 */}
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4">
+              <h3 className="text-gray-300 text-sm font-medium mb-2">使用提示</h3>
+              <ul className="text-gray-400 text-xs space-y-1">
+                <li>• 描述你的现状和困惑</li>
+                <li>• 点击选项或自由输入</li>
+                <li>• 路线会随对话解锁</li>
+                <li>• 任务会在对话中产生</li>
+                <li>• 完成任务提升属性</li>
+              </ul>
+            </div>
           </div>
-        )}
+        </motion.div>
       </div>
     </div>
   );

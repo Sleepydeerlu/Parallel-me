@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
@@ -8,6 +8,10 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  metadata?: {
+    scene?: string;
+    emotion?: string;
+  };
 }
 
 interface Action {
@@ -32,33 +36,56 @@ interface Quest {
   description: string;
   difficulty: number;
   estimatedMinutes: number;
-  type: "main" | "side" | "hidden" | "emergency" | string;
+  type: string;
   status: "active" | "completed" | "failed" | "abandoned";
   acceptanceCriteria: string[];
+}
+
+interface PathUnlock {
+  id: string;
+  name: string;
+  description: string;
+  trigger: string;
+}
+
+interface ContextStats {
+  messageCount: number;
+  summaryCount: number;
+  pathCount: number;
+  questCount: number;
 }
 
 interface ChatInterfaceProps {
   onAction?: (actionId: string) => void;
   onQuestAccept?: (quest: Quest) => void;
+  onPathUnlock?: (path: PathUnlock) => void;
+  onContextUpdate?: (stats: ContextStats) => void;
 }
 
-export default function ChatInterface({ onAction, onQuestAccept }: ChatInterfaceProps) {
+export default function ChatInterface({ 
+  onAction, 
+  onQuestAccept, 
+  onPathUnlock,
+  onContextUpdate 
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentScene, setCurrentScene] = useState<Scene | null>(null);
   const [currentActions, setCurrentActions] = useState<Action[]>([]);
   const [currentQuests, setCurrentQuests] = useState<Quest[]>([]);
+  const [currentPathUnlocks, setCurrentPathUnlocks] = useState<PathUnlock[]>([]);
   const [placeholder, setPlaceholder] = useState("告诉我你的情况...");
+  const [context, setContext] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   // 初始化欢迎消息
   useEffect(() => {
@@ -110,6 +137,9 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
+    setCurrentActions([]);
+    setCurrentQuests([]);
+    setCurrentPathUnlocks([]);
 
     try {
       const response = await fetch("/api/chat", {
@@ -122,6 +152,7 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
             role: m.role,
             content: m.content,
           })),
+          context,
         }),
       });
 
@@ -133,16 +164,46 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
           role: "assistant",
           content: data.narrative,
           timestamp: new Date(),
+          metadata: {
+            scene: data.scene?.location,
+            emotion: data.emotionalState?.primary,
+          },
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
         setCurrentScene(data.scene || null);
         setCurrentActions(data.actions || []);
         setCurrentQuests(data.quests || []);
+        setCurrentPathUnlocks(data.pathUnlocks || []);
         setPlaceholder(data.freeInputPlaceholder || "告诉我你的想法...");
+        
+        // 更新上下文
+        if (data.context) {
+          setContext(data.context);
+        }
+        
+        // 通知父组件
+        if (data.contextStats) {
+          onContextUpdate?.(data.contextStats);
+        }
+        
+        // 处理路线解锁
+        if (data.pathUnlocks && data.pathUnlocks.length > 0) {
+          data.pathUnlocks.forEach((path: PathUnlock) => {
+            onPathUnlock?.(path);
+          });
+        }
       }
     } catch (error) {
       console.error("Error:", error);
+      // 添加错误提示消息
+      const errorMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        role: "assistant",
+        content: "抱歉，出现了一些问题。请再试一次。",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -161,10 +222,14 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+    <div className="flex flex-col h-full bg-gradient-to-b from-gray-900 to-gray-800">
       {/* 场景指示器 */}
       {currentScene && (
-        <div className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 px-4 py-2">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 px-4 py-2"
+        >
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center space-x-4">
               <span className="text-gray-400">📍 {currentScene.location}</span>
@@ -172,18 +237,18 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
             </div>
             <span className="text-gray-400 italic">{currentScene.atmosphere}</span>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* 消息区域 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {messages.map((message) => (
             <motion.div
               key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.3 }}
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
@@ -195,6 +260,11 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
                 }`}
               >
                 <div className="whitespace-pre-wrap">{message.content}</div>
+                {message.metadata?.emotion && (
+                  <div className="mt-2 text-xs opacity-60">
+                    情感: {message.metadata.emotion}
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
@@ -222,16 +292,38 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
             className="flex flex-wrap gap-2 justify-start"
           >
-            {currentActions.map((action) => (
-              <button
+            {currentActions.map((action, index) => (
+              <motion.button
                 key={action.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 * index }}
                 onClick={() => handleActionClick(action)}
-                className="bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-full px-4 py-2 text-sm transition-colors border border-gray-600 hover:border-gray-500"
+                className="bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-full px-4 py-2 text-sm transition-all border border-gray-600 hover:border-gray-500 hover:scale-105"
+                title={action.description}
               >
                 {action.label}
-              </button>
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+
+        {/* 新路线解锁提示 */}
+        {currentPathUnlocks.length > 0 && !isLoading && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-purple-900/50 border border-purple-700 rounded-xl p-4"
+          >
+            <div className="text-purple-300 text-sm font-medium mb-2">🌟 新路线解锁</div>
+            {currentPathUnlocks.map((path) => (
+              <div key={path.id} className="mb-2 last:mb-0">
+                <div className="text-white font-medium">{path.name}</div>
+                <div className="text-gray-300 text-sm mt-1">{path.description}</div>
+              </div>
             ))}
           </motion.div>
         )}
@@ -248,9 +340,13 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
               <div key={quest.id} className="mb-2 last:mb-0">
                 <div className="text-white font-medium">{quest.title}</div>
                 <div className="text-gray-300 text-sm mt-1">{quest.description}</div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <span className="text-xs text-gray-400">难度: {quest.difficulty}/5</span>
+                  <span className="text-xs text-gray-400">预计: {quest.estimatedMinutes}分钟</span>
+                </div>
                 <button
-                  onClick={() => onQuestAccept?.(quest)}
-                  className="mt-2 text-indigo-400 hover:text-indigo-300 text-sm"
+                  onClick={() => onQuestAccept?.({ ...quest, status: "active" })}
+                  className="mt-2 text-indigo-400 hover:text-indigo-300 text-sm transition-colors"
                 >
                   接受任务 →
                 </button>
@@ -272,12 +368,12 @@ export default function ChatInterface({ onAction, onQuestAccept }: ChatInterface
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={isLoading}
-            className="flex-1 bg-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400 disabled:opacity-50"
+            className="flex-1 bg-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400 disabled:opacity-50 transition-all"
           />
           <button
             onClick={() => handleSendMessage(inputValue)}
             disabled={isLoading || !inputValue.trim()}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-6 py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-6 py-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
           >
             发送
           </button>
