@@ -15,27 +15,27 @@ const examples = [
 
 const features = [
   {
+    icon: "💬",
+    title: "无限对话",
+    description: "与AI持续对话，探索人生的无限可能，没有预设选项。",
+  },
+  {
+    icon: "🌟",
+    title: "动态路线",
+    description: "对话中自然解锁新路线，路线会因你的表述而改变。",
+  },
+  {
     icon: "🎯",
-    title: "Simulate paths",
-    description: "Input your goal and let AI generate multiple life paths with different approaches.",
-  },
-  {
-    icon: "⚔️",
-    title: "Choose a main quest",
-    description: "Compare paths, understand tradeoffs, and select one as your main quest line.",
-  },
-  {
-    icon: "⬆️",
-    title: "Level up weekly",
-    description: "Complete daily quests, track your progress, and review your growth every week.",
+    title: "实时任务",
+    description: "根据对话实时生成任务，每次体验都不同。",
   },
 ];
 
 const stats = [
-  { value: "3+", label: "Parallel Paths" },
-  { value: "7", label: "Day Quest Map" },
-  { value: "5", label: "Core Attributes" },
-  { value: "∞", label: "Possibilities" },
+  { value: "∞", label: "平行路线" },
+  { value: "实时", label: "动态生成" },
+  { value: "7", label: "核心属性" },
+  { value: "沉浸", label: "式体验" },
 ];
 
 export default function Home() {
@@ -108,16 +108,22 @@ export default function Home() {
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/onboarding">
+              <Link href="/play">
                 <Button size="lg" className="px-8 py-4 text-lg bg-indigo-600 hover:bg-indigo-700">
-                  🚀 Start your path
+                  🎮 开始探索 (v2 Demo)
                 </Button>
               </Link>
-              <Link href="#demo">
+              <Link href="/onboarding">
                 <Button variant="outline" size="lg" className="px-8 py-4 text-lg">
-                  🎮 Try Demo
+                  📋 传统模式 (v1)
                 </Button>
               </Link>
+            </div>
+
+            <div className="mt-6">
+              <span className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                ✨ v2: 无限对话 + 动态路线 + 沉浸式体验
+              </span>
             </div>
           </motion.div>
 
