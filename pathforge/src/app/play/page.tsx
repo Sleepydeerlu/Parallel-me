@@ -6,6 +6,7 @@ import ChatInterface from "@/components/chat/chat-interface";
 import AttributePanel from "@/components/chat/attribute-panel";
 import PathMap from "@/components/chat/path-map";
 import QuestList from "@/components/chat/quest-list";
+import { clearContextStorage } from "@/lib/ai/storage";
 
 interface Path {
   id: string;
@@ -49,6 +50,25 @@ export default function PlayPage() {
   const [activePathId, setActivePathId] = useState<string | undefined>();
   const [quests, setQuests] = useState<Quest[]>([]);
   const [contextStats, setContextStats] = useState<ContextStats | null>(null);
+  const [resetKey, setResetKey] = useState(0);
+
+  const handleClearChat = useCallback(() => {
+    if (confirm("确定要清除对话历史吗？这将删除所有对话数据。")) {
+      clearContextStorage();
+      setResetKey((prev) => prev + 1);
+      setPaths([]);
+      setQuests([]);
+      setAttributes({
+        courage: 10,
+        wisdom: 10,
+        empathy: 10,
+        creativity: 10,
+        resilience: 10,
+        communication: 10,
+        execution: 10,
+      });
+    }
+  }, []);
 
   const handleAction = useCallback((actionId: string) => {
     console.log("Action:", actionId);
@@ -131,6 +151,14 @@ export default function PlayPage() {
                 <span>任务: {contextStats.questCount}</span>
               </div>
             )}
+            {/* 清除对话按钮 */}
+            <button
+              onClick={handleClearChat}
+              className="text-gray-400 hover:text-red-400 p-2 transition-colors text-sm"
+              title="清除对话历史"
+            >
+              🗑️
+            </button>
             <button
               onClick={() => setShowSidebar(!showSidebar)}
               className="text-gray-400 hover:text-white p-2 transition-colors"
@@ -146,10 +174,12 @@ export default function PlayPage() {
         {/* 聊天区域 */}
         <div className="flex-1">
           <ChatInterface
+            key={resetKey}
             onAction={handleAction}
             onQuestAccept={handleQuestAccept}
             onPathUnlock={handlePathUnlock}
             onContextUpdate={handleContextUpdate}
+            resetKey={resetKey}
           />
         </div>
 

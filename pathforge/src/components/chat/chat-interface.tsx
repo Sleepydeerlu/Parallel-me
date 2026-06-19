@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { saveContextToStorage, loadContextFromStorage, clearContextStorage, hasStoredContext } from "@/lib/ai/storage";
+import { serializeContext } from "@/lib/ai/context-manager";
 
 interface Message {
   id: string;
@@ -60,13 +62,15 @@ interface ChatInterfaceProps {
   onQuestAccept?: (quest: Quest) => void;
   onPathUnlock?: (path: PathUnlock) => void;
   onContextUpdate?: (stats: ContextStats) => void;
+  resetKey?: number;
 }
 
 export default function ChatInterface({ 
   onAction, 
   onQuestAccept, 
   onPathUnlock,
-  onContextUpdate 
+  onContextUpdate,
+  resetKey = 0
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -87,8 +91,70 @@ export default function ChatInterface({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // 初始化欢迎消息
+  // 初始化欢迎消息或加载存储的上下文
   useEffect(() => {
+    // 如果resetKey变化，重置为欢迎消息
+    if (resetKey > 0) {
+      const welcomeMessage: Message = {
+        id: "welcome",
+        role: "assistant",
+        content: `欢迎来到PathForge。\n\n在这里，你不是在规划人生，而是在探索人生的无限可能。\n\n告诉我，你是谁？你最近在思考什么？`,
+        timestamp: new Date(),
+      };
+      setMessages([welcomeMessage]);
+      setContext(null);
+      setCurrentScene({
+        location: "起点",
+        time: "现在",
+        atmosphere: "充满期待",
+        description: "你站在一段新旅程的起点，周围是无限的可能。",
+      });
+      setCurrentActions([
+        {
+          id: "introduce",
+          label: "自我介绍",
+          description: "告诉我你是谁，你的现状",
+          risk: "low",
+        },
+        {
+          id: "confused",
+          label: "我很迷茫",
+          description: "说出你的困惑",
+          risk: "low",
+        },
+        {
+          id: "explore",
+          label: "我想探索",
+          description: "直接开始探索不同的人生路线",
+          risk: "low",
+        },
+      ]);
+      return;
+    }
+
+    // 尝试从本地存储加载上下文
+    const storedContext = loadContextFromStorage();
+    if (storedContext && storedContext.recentMessages.length > 0) {
+      // 恢复消息
+      const restoredMessages: Message[] = storedContext.recentMessages.map((msg) => ({
+        id: msg.id,
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+        metadata: msg.metadata,
+      }));
+      setMessages(restoredMessages);
+      setContext(serializeContext(storedContext));
+      
+      // 恢复场景
+      if (storedContext.currentScene) {
+        setCurrentScene(storedContext.currentScene);
+      }
+      
+      return;
+    }
+
+    // 显示欢迎消息
     const welcomeMessage: Message = {
       id: "welcome",
       role: "assistant",
@@ -122,7 +188,7 @@ export default function ChatInterface({
         risk: "low",
       },
     ]);
-  }, []);
+  }, [resetKey]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -177,9 +243,16 @@ export default function ChatInterface({
         setCurrentPathUnlocks(data.pathUnlocks || []);
         setPlaceholder(data.freeInputPlaceholder || "告诉我你的想法...");
         
-        // 更新上下文
+        // 更新上下文并保存到本地存储
         if (data.context) {
           setContext(data.context);
+          // 保存到本地存储
+          try {
+            const contextObj = JSON.parse(data.context);
+            saveContextToStorage(contextObj);
+          } catch (e) {
+            console.error("Failed to save context:", e);
+          }
         }
         
         // 通知父组件
