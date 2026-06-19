@@ -1,39 +1,23 @@
 "use client";
 
+import { memo } from "react";
 import { motion } from "framer-motion";
-
-interface Attributes {
-  courage: number;
-  wisdom: number;
-  empathy: number;
-  creativity: number;
-  resilience: number;
-  communication: number;
-  execution: number;
-}
+import { ATTRIBUTE_CONFIG, ATTRIBUTE_KEYS } from "@/lib/constants";
+import type { Attributes } from "@/lib/types";
 
 interface AttributePanelProps {
   attributes: Attributes;
   className?: string;
 }
 
-const attributeConfig = {
-  courage: { label: "勇气", icon: "⚔️", color: "bg-red-500" },
-  wisdom: { label: "智慧", icon: "📚", color: "bg-blue-500" },
-  empathy: { label: "共情", icon: "❤️", color: "bg-pink-500" },
-  creativity: { label: "创造力", icon: "🎨", color: "bg-purple-500" },
-  resilience: { label: "韧性", icon: "🛡️", color: "bg-yellow-500" },
-  communication: { label: "沟通力", icon: "💬", color: "bg-green-500" },
-  execution: { label: "执行力", icon: "⚡", color: "bg-orange-500" },
-};
-
-export default function AttributePanel({ attributes, className }: AttributePanelProps) {
+const AttributePanel = memo(function AttributePanel({ attributes, className }: AttributePanelProps) {
   return (
     <div className={`bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 ${className}`}>
       <h3 className="text-gray-300 text-sm font-medium mb-3">属性面板</h3>
       <div className="space-y-3">
-        {Object.entries(attributeConfig).map(([key, config]) => {
-          const value = attributes[key as keyof Attributes] || 0;
+        {ATTRIBUTE_KEYS.map((key) => {
+          const value = attributes[key] || 0;
+          const config = ATTRIBUTE_CONFIG[key];
           const percentage = Math.min((value / 30) * 100, 100);
 
           return (
@@ -59,4 +43,6 @@ export default function AttributePanel({ attributes, className }: AttributePanel
       </div>
     </div>
   );
-}
+});
+
+export default AttributePanel;

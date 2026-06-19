@@ -12,6 +12,7 @@ import {
   deserializeContext
 } from "@/lib/ai/context-manager";
 import { DialogueContext } from "@/lib/ai/context";
+import { checkRateLimit, getRateLimitHeaders, createRateLimitResponse } from "@/lib/rate-limit";
 
 interface RequestBody {
   messages: { role: string; content: string }[];
@@ -19,6 +20,14 @@ interface RequestBody {
 }
 
 export async function POST(request: Request) {
+  // Rate limiting
+  const identifier = request.headers.get("x-forwarded-for") || "anonymous";
+  const rateLimitResult = checkRateLimit(identifier);
+  
+  if (!rateLimitResult.allowed) {
+    return createRateLimitResponse();
+  }
+
   try {
     const body = await request.json();
     const { messages, context: serializedContext } = body as RequestBody;
@@ -26,7 +35,7 @@ export async function POST(request: Request) {
     if (!messages || messages.length === 0) {
       return NextResponse.json(
         { error: "Messages are required" },
-        { status: 400 }
+        { status: 400, headers: getRateLimitHeaders(rateLimitResult) }
       );
     }
 
@@ -150,16 +159,19 @@ export async function POST(request: Request) {
     // 序列化上下文
     const newSerializedContext = serializeContext(context);
 
-    return NextResponse.json({
-      ...aiResponse,
-      context: newSerializedContext,
-      contextStats: {
-        messageCount: context.metadata.messageCount,
-        summaryCount: context.metadata.summaryCount,
-        pathCount: context.paths.length,
-        questCount: context.quests.length,
+    return NextResponse.json(
+      {
+        ...aiResponse,
+        context: newSerializedContext,
+        contextStats: {
+          messageCount: context.metadata.messageCount,
+          summaryCount: context.metadata.summaryCount,
+          pathCount: context.paths.length,
+          questCount: context.quests.length,
+        },
       },
-    });
+      { headers: getRateLimitHeaders(rateLimitResult) }
+    );
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(

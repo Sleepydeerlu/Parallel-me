@@ -6,46 +6,14 @@ import ChatInterface from "@/components/chat/chat-interface";
 import AttributePanel from "@/components/chat/attribute-panel";
 import PathMap from "@/components/chat/path-map";
 import QuestList from "@/components/chat/quest-list";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { clearContextStorage } from "@/lib/ai/storage";
+import { DEFAULT_ATTRIBUTES } from "@/lib/constants";
+import type { Path, Quest, ContextStats, Attributes } from "@/lib/types";
 
-interface Path {
-  id: string;
-  name: string;
-  description: string;
-  status: "locked" | "unlocked" | "active" | "completed" | "abandoned";
-  progress: number;
-}
-
-interface Quest {
-  id: string;
-  title: string;
-  narrative: string;
-  description: string;
-  difficulty: number;
-  estimatedMinutes: number;
-  type: string;
-  status: "active" | "completed" | "failed" | "abandoned";
-  acceptanceCriteria: string[];
-}
-
-interface ContextStats {
-  messageCount: number;
-  summaryCount: number;
-  pathCount: number;
-  questCount: number;
-}
-
-export default function PlayPage() {
+function PlayPageContent() {
   const [showSidebar, setShowSidebar] = useState(true);
-  const [attributes, setAttributes] = useState({
-    courage: 10,
-    wisdom: 10,
-    empathy: 10,
-    creativity: 10,
-    resilience: 10,
-    communication: 10,
-    execution: 10,
-  });
+  const [attributes, setAttributes] = useState<Attributes>({ ...DEFAULT_ATTRIBUTES });
   const [paths, setPaths] = useState<Path[]>([]);
   const [activePathId, setActivePathId] = useState<string | undefined>();
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -58,15 +26,7 @@ export default function PlayPage() {
       setResetKey((prev) => prev + 1);
       setPaths([]);
       setQuests([]);
-      setAttributes({
-        courage: 10,
-        wisdom: 10,
-        empathy: 10,
-        creativity: 10,
-        resilience: 10,
-        communication: 10,
-        execution: 10,
-      });
+      setAttributes({ ...DEFAULT_ATTRIBUTES });
     }
   }, []);
 
@@ -76,7 +36,6 @@ export default function PlayPage() {
 
   const handleQuestAccept = useCallback((quest: Quest) => {
     setQuests((prev) => {
-      // 检查是否已存在
       if (prev.some((q) => q.id === quest.id)) {
         return prev;
       }
@@ -90,8 +49,6 @@ export default function PlayPage() {
         q.id === questId ? { ...q, status: "completed" } : q
       )
     );
-
-    // 增加属性
     setAttributes((prev) => ({
       ...prev,
       execution: prev.execution + 1,
@@ -100,7 +57,6 @@ export default function PlayPage() {
 
   const handlePathUnlock = useCallback((path: { id: string; name: string; description: string }) => {
     setPaths((prev) => {
-      // 检查是否已存在
       if (prev.some((p) => p.id === path.id)) {
         return prev;
       }
@@ -132,7 +88,7 @@ export default function PlayPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-900">
-      {/* 顶部导航 */}
+      {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -141,7 +97,6 @@ export default function PlayPage() {
             <span className="text-gray-400 text-sm">探索无限可能</span>
           </div>
           <div className="flex items-center space-x-4">
-            {/* 上下文统计 */}
             {contextStats && (
               <div className="hidden sm:flex items-center space-x-2 text-xs text-gray-500">
                 <span>消息: {contextStats.messageCount}</span>
@@ -151,7 +106,6 @@ export default function PlayPage() {
                 <span>任务: {contextStats.questCount}</span>
               </div>
             )}
-            {/* 清除对话按钮 */}
             <button
               onClick={handleClearChat}
               className="text-gray-400 hover:text-red-400 p-2 transition-colors text-sm"
@@ -169,9 +123,8 @@ export default function PlayPage() {
         </div>
       </header>
 
-      {/* 主内容区 */}
+      {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 聊天区域 */}
         <div className="flex-1">
           <ChatInterface
             key={resetKey}
@@ -183,7 +136,7 @@ export default function PlayPage() {
           />
         </div>
 
-        {/* 侧边栏 */}
+        {/* Sidebar */}
         <motion.div
           initial={false}
           animate={{ width: showSidebar ? 320 : 0 }}
@@ -202,7 +155,7 @@ export default function PlayPage() {
               onComplete={handleQuestComplete}
             />
             
-            {/* 帮助信息 */}
+            {/* Help */}
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4">
               <h3 className="text-gray-300 text-sm font-medium mb-2">使用提示</h3>
               <ul className="text-gray-400 text-xs space-y-1">
@@ -217,5 +170,13 @@ export default function PlayPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function PlayPage() {
+  return (
+    <ErrorBoundary>
+      <PlayPageContent />
+    </ErrorBoundary>
   );
 }

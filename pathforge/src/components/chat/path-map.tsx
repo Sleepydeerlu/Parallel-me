@@ -1,14 +1,9 @@
 "use client";
 
+import { memo } from "react";
 import { motion } from "framer-motion";
-
-interface Path {
-  id: string;
-  name: string;
-  description: string;
-  status: "locked" | "unlocked" | "active" | "completed" | "abandoned";
-  progress: number;
-}
+import { PATH_STATUS_CONFIG } from "@/lib/constants";
+import type { Path } from "@/lib/types";
 
 interface PathMapProps {
   paths: Path[];
@@ -17,15 +12,7 @@ interface PathMapProps {
   className?: string;
 }
 
-const statusConfig = {
-  locked: { color: "bg-gray-600", textColor: "text-gray-400", label: "🔒 锁定" },
-  unlocked: { color: "bg-blue-600", textColor: "text-blue-300", label: "🔓 已解锁" },
-  active: { color: "bg-indigo-600", textColor: "text-indigo-300", label: "✨ 当前" },
-  completed: { color: "bg-green-600", textColor: "text-green-300", label: "✅ 完成" },
-  abandoned: { color: "bg-gray-600", textColor: "text-gray-400", label: "❌ 放弃" },
-};
-
-export default function PathMap({ paths, activePathId, onPathClick, className }: PathMapProps) {
+const PathMap = memo(function PathMap({ paths, activePathId, onPathClick, className }: PathMapProps) {
   if (paths.length === 0) {
     return (
       <div className={`bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 ${className}`}>
@@ -42,7 +29,7 @@ export default function PathMap({ paths, activePathId, onPathClick, className }:
       <h3 className="text-gray-300 text-sm font-medium mb-3">人生路线图</h3>
       <div className="space-y-2">
         {paths.map((path, index) => {
-          const config = statusConfig[path.status];
+          const config = PATH_STATUS_CONFIG[path.status] || PATH_STATUS_CONFIG.locked;
           const isActive = path.id === activePathId;
 
           return (
@@ -92,4 +79,6 @@ export default function PathMap({ paths, activePathId, onPathClick, className }:
       </div>
     </div>
   );
-}
+});
+
+export default PathMap;

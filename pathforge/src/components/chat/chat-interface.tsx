@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { saveContextToStorage, loadContextFromStorage, clearContextStorage, hasStoredContext } from "@/lib/ai/storage";
+import { saveContextToStorage, loadContextFromStorage } from "@/lib/ai/storage";
 import { serializeContext } from "@/lib/ai/context-manager";
+import { 
+  WELCOME_MESSAGE, 
+  INITIAL_SCENE, 
+  INITIAL_ACTIONS 
+} from "@/lib/constants";
+import type { Quest, PathUnlock, Scene, Action, ContextStats } from "@/lib/types";
 
 interface Message {
   id: string;
@@ -16,47 +22,6 @@ interface Message {
   };
 }
 
-interface Action {
-  id: string;
-  label: string;
-  description: string;
-  risk: "low" | "medium" | "high";
-  reward?: string;
-}
-
-interface Scene {
-  location: string;
-  time: string;
-  atmosphere: string;
-  description: string;
-}
-
-interface Quest {
-  id: string;
-  title: string;
-  narrative: string;
-  description: string;
-  difficulty: number;
-  estimatedMinutes: number;
-  type: string;
-  status: "active" | "completed" | "failed" | "abandoned";
-  acceptanceCriteria: string[];
-}
-
-interface PathUnlock {
-  id: string;
-  name: string;
-  description: string;
-  trigger: string;
-}
-
-interface ContextStats {
-  messageCount: number;
-  summaryCount: number;
-  pathCount: number;
-  questCount: number;
-}
-
 interface ChatInterfaceProps {
   onAction?: (actionId: string) => void;
   onQuestAccept?: (quest: Quest) => void;
@@ -64,6 +29,58 @@ interface ChatInterfaceProps {
   onContextUpdate?: (stats: ContextStats) => void;
   resetKey?: number;
 }
+
+// Memoized message component
+const MessageBubble = memo(function MessageBubble({ message }: { message: Message }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.3 }}
+      className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+    >
+      <div
+        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+          message.role === "user"
+            ? "bg-indigo-600 text-white"
+            : "bg-gray-700 text-gray-100"
+        }`}
+      >
+        <div className="whitespace-pre-wrap">{message.content}</div>
+        {message.metadata?.emotion && (
+          <div className="mt-2 text-xs opacity-60">
+            情感: {message.metadata.emotion}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+});
+
+// Memoized action button component
+const ActionButton = memo(function ActionButton({ 
+  action, 
+  onClick, 
+  index 
+}: { 
+  action: Action; 
+  onClick: (action: Action) => void;
+  index: number;
+}) {
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.1 * index }}
+      onClick={() => onClick(action)}
+      className="bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-full px-4 py-2 text-sm transition-all border border-gray-600 hover:border-gray-500 hover:scale-105"
+      title={action.description}
+    >
+      {action.label}
+    </motion.button>
+  );
+});
 
 export default function ChatInterface({ 
   onAction, 
@@ -91,51 +108,27 @@ export default function ChatInterface({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // 初始化欢迎消息或加载存储的上下文
+  // Reset state function
+  const resetToWelcome = useCallback(() => {
+    setMessages([WELCOME_MESSAGE]);
+    setContext(null);
+    setCurrentScene(INITIAL_SCENE);
+    setCurrentActions(INITIAL_ACTIONS);
+    setCurrentQuests([]);
+    setCurrentPathUnlocks([]);
+    setPlaceholder("告诉我你的情况...");
+  }, []);
+
+  // Initialize or reset
   useEffect(() => {
-    // 如果resetKey变化，重置为欢迎消息
     if (resetKey > 0) {
-      const welcomeMessage: Message = {
-        id: "welcome",
-        role: "assistant",
-        content: `欢迎来到PathForge。\n\n在这里，你不是在规划人生，而是在探索人生的无限可能。\n\n告诉我，你是谁？你最近在思考什么？`,
-        timestamp: new Date(),
-      };
-      setMessages([welcomeMessage]);
-      setContext(null);
-      setCurrentScene({
-        location: "起点",
-        time: "现在",
-        atmosphere: "充满期待",
-        description: "你站在一段新旅程的起点，周围是无限的可能。",
-      });
-      setCurrentActions([
-        {
-          id: "introduce",
-          label: "自我介绍",
-          description: "告诉我你是谁，你的现状",
-          risk: "low",
-        },
-        {
-          id: "confused",
-          label: "我很迷茫",
-          description: "说出你的困惑",
-          risk: "low",
-        },
-        {
-          id: "explore",
-          label: "我想探索",
-          description: "直接开始探索不同的人生路线",
-          risk: "low",
-        },
-      ]);
+      resetToWelcome();
       return;
     }
 
-    // 尝试从本地存储加载上下文
+    // Try to load from storage
     const storedContext = loadContextFromStorage();
     if (storedContext && storedContext.recentMessages.length > 0) {
-      // 恢复消息
       const restoredMessages: Message[] = storedContext.recentMessages.map((msg) => ({
         id: msg.id,
         role: msg.role as "user" | "assistant",
@@ -146,51 +139,16 @@ export default function ChatInterface({
       setMessages(restoredMessages);
       setContext(serializeContext(storedContext));
       
-      // 恢复场景
       if (storedContext.currentScene) {
         setCurrentScene(storedContext.currentScene);
       }
-      
       return;
     }
 
-    // 显示欢迎消息
-    const welcomeMessage: Message = {
-      id: "welcome",
-      role: "assistant",
-      content: `欢迎来到PathForge。\n\n在这里，你不是在规划人生，而是在探索人生的无限可能。\n\n告诉我，你是谁？你最近在思考什么？`,
-      timestamp: new Date(),
-    };
-    setMessages([welcomeMessage]);
-    setCurrentScene({
-      location: "起点",
-      time: "现在",
-      atmosphere: "充满期待",
-      description: "你站在一段新旅程的起点，周围是无限的可能。",
-    });
-    setCurrentActions([
-      {
-        id: "introduce",
-        label: "自我介绍",
-        description: "告诉我你是谁，你的现状",
-        risk: "low",
-      },
-      {
-        id: "confused",
-        label: "我很迷茫",
-        description: "说出你的困惑",
-        risk: "low",
-      },
-      {
-        id: "explore",
-        label: "我想探索",
-        description: "直接开始探索不同的人生路线",
-        risk: "low",
-      },
-    ]);
-  }, [resetKey]);
+    resetToWelcome();
+  }, [resetKey, resetToWelcome]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
 
     const userMessage: Message = {
@@ -243,10 +201,8 @@ export default function ChatInterface({
         setCurrentPathUnlocks(data.pathUnlocks || []);
         setPlaceholder(data.freeInputPlaceholder || "告诉我你的想法...");
         
-        // 更新上下文并保存到本地存储
         if (data.context) {
           setContext(data.context);
-          // 保存到本地存储
           try {
             const contextObj = JSON.parse(data.context);
             saveContextToStorage(contextObj);
@@ -255,12 +211,10 @@ export default function ChatInterface({
           }
         }
         
-        // 通知父组件
         if (data.contextStats) {
           onContextUpdate?.(data.contextStats);
         }
         
-        // 处理路线解锁
         if (data.pathUnlocks && data.pathUnlocks.length > 0) {
           data.pathUnlocks.forEach((path: PathUnlock) => {
             onPathUnlock?.(path);
@@ -269,7 +223,6 @@ export default function ChatInterface({
       }
     } catch (error) {
       console.error("Error:", error);
-      // 添加错误提示消息
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         role: "assistant",
@@ -280,23 +233,23 @@ export default function ChatInterface({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, messages, context, onContextUpdate, onPathUnlock]);
 
-  const handleActionClick = (action: Action) => {
+  const handleActionClick = useCallback((action: Action) => {
     handleSendMessage(action.label);
     onAction?.(action.id);
-  };
+  }, [handleSendMessage, onAction]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage(inputValue);
     }
-  };
+  }, [handleSendMessage, inputValue]);
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-gray-900 to-gray-800">
-      {/* 场景指示器 */}
+      {/* Scene indicator */}
       {currentScene && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -313,37 +266,15 @@ export default function ChatInterface({
         </motion.div>
       )}
 
-      {/* 消息区域 */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <AnimatePresence mode="popLayout">
           {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.role === "user"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-700 text-gray-100"
-                }`}
-              >
-                <div className="whitespace-pre-wrap">{message.content}</div>
-                {message.metadata?.emotion && (
-                  <div className="mt-2 text-xs opacity-60">
-                    情感: {message.metadata.emotion}
-                  </div>
-                )}
-              </div>
-            </motion.div>
+            <MessageBubble key={message.id} message={message} />
           ))}
         </AnimatePresence>
 
-        {/* 加载指示器 */}
+        {/* Loading indicator */}
         {isLoading && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -360,7 +291,7 @@ export default function ChatInterface({
           </motion.div>
         )}
 
-        {/* 可选动作 */}
+        {/* Actions */}
         {currentActions.length > 0 && !isLoading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -369,22 +300,17 @@ export default function ChatInterface({
             className="flex flex-wrap gap-2 justify-start"
           >
             {currentActions.map((action, index) => (
-              <motion.button
+              <ActionButton
                 key={action.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 * index }}
-                onClick={() => handleActionClick(action)}
-                className="bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-full px-4 py-2 text-sm transition-all border border-gray-600 hover:border-gray-500 hover:scale-105"
-                title={action.description}
-              >
-                {action.label}
-              </motion.button>
+                action={action}
+                onClick={handleActionClick}
+                index={index}
+              />
             ))}
           </motion.div>
         )}
 
-        {/* 新路线解锁提示 */}
+        {/* Path unlocks */}
         {currentPathUnlocks.length > 0 && !isLoading && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -401,7 +327,7 @@ export default function ChatInterface({
           </motion.div>
         )}
 
-        {/* 新任务提示 */}
+        {/* Quests */}
         {currentQuests.length > 0 && !isLoading && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -431,7 +357,7 @@ export default function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 输入区域 */}
+      {/* Input */}
       <div className="bg-gray-800 border-t border-gray-700 p-4">
         <div className="flex space-x-2">
           <input
