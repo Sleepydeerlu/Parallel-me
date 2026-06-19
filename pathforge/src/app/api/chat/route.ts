@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
     const model = process.env.OPENAI_MODEL || "gpt-4";
 
-    if (apiKey && apiKey !== "sk-your-api-key-here") {
+    if (apiKey && apiKey !== "your-api-key") {
       try {
         const response = await fetch(`${baseUrl}/chat/completions`, {
           method: "POST",
