@@ -135,7 +135,6 @@ export async function generateAIResponse(
         messages,
         temperature: 0.8,
         max_tokens: 2000,
-        response_format: { type: "json_object" },
       }),
     });
 
@@ -153,7 +152,15 @@ export async function generateAIResponse(
 
     try {
       // 尝试解析JSON响应
-      const parsed = JSON.parse(content);
+      let jsonContent = content;
+      
+      // 处理markdown格式的JSON
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1].trim();
+      }
+      
+      const parsed = JSON.parse(jsonContent);
       return validateAndNormalizeResponse(parsed);
     } catch (parseError) {
       console.error("Failed to parse AI response as JSON:", parseError);
@@ -164,7 +171,18 @@ export async function generateAIResponse(
           const parsed = JSON.parse(jsonMatch[0]);
           return validateAndNormalizeResponse(parsed);
         } catch {
-          return generateMockResponse(userMessage, context);
+          // 返回带有AI原始叙述的响应
+          return {
+            narrative: content.replace(/```json\n?|\n?```/g, "").trim(),
+            actions: [
+              { id: "continue", label: "继续对话", description: "告诉我更多", risk: "low" },
+            ],
+            freeInputPlaceholder: "告诉我你的想法...",
+            pathUnlocks: [],
+            quests: [],
+            attributeChanges: { courage: 0, wisdom: 0, empathy: 0, creativity: 0, resilience: 0, communication: 0, execution: 0 },
+            emotionalState: { primary: "neutral", intensity: 50 },
+          };
         }
       }
       return generateMockResponse(userMessage, context);
