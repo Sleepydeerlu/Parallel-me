@@ -24,13 +24,12 @@ interface Message {
 
 interface ChatInterfaceProps {
   onAction?: (actionId: string) => void;
-  onQuestAccept?: (quest: Quest) => void;
   onPathUnlock?: (path: PathUnlock) => void;
+  onQuestUpdate?: (quests: Quest[]) => void;
   onContextUpdate?: (stats: ContextStats) => void;
   resetKey?: number;
 }
 
-// Memoized message component
 const MessageBubble = memo(function MessageBubble({ message }: { message: Message }) {
   return (
     <motion.div
@@ -48,17 +47,11 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: Messag
         }`}
       >
         <div className="whitespace-pre-wrap">{message.content}</div>
-        {message.metadata?.emotion && (
-          <div className="mt-2 text-xs opacity-60">
-            情感: {message.metadata.emotion}
-          </div>
-        )}
       </div>
     </motion.div>
   );
 });
 
-// Memoized action button component
 const ActionButton = memo(function ActionButton({ 
   action, 
   onClick, 
@@ -84,8 +77,8 @@ const ActionButton = memo(function ActionButton({
 
 export default function ChatInterface({ 
   onAction, 
-  onQuestAccept, 
   onPathUnlock,
+  onQuestUpdate,
   onContextUpdate,
   resetKey = 0
 }: ChatInterfaceProps) {
@@ -94,7 +87,6 @@ export default function ChatInterface({
   const [isLoading, setIsLoading] = useState(false);
   const [currentScene, setCurrentScene] = useState<Scene | null>(null);
   const [currentActions, setCurrentActions] = useState<Action[]>([]);
-  const [currentQuests, setCurrentQuests] = useState<Quest[]>([]);
   const [currentPathUnlocks, setCurrentPathUnlocks] = useState<PathUnlock[]>([]);
   const [placeholder, setPlaceholder] = useState("告诉我你的情况...");
   const [context, setContext] = useState<string | null>(null);
@@ -108,25 +100,21 @@ export default function ChatInterface({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Reset state function
   const resetToWelcome = useCallback(() => {
     setMessages([WELCOME_MESSAGE]);
     setContext(null);
     setCurrentScene(INITIAL_SCENE);
     setCurrentActions(INITIAL_ACTIONS);
-    setCurrentQuests([]);
     setCurrentPathUnlocks([]);
     setPlaceholder("告诉我你的情况...");
   }, []);
 
-  // Initialize or reset
   useEffect(() => {
     if (resetKey > 0) {
       resetToWelcome();
       return;
     }
 
-    // Try to load from storage
     const storedContext = loadContextFromStorage();
     if (storedContext && storedContext.recentMessages.length > 0) {
       const restoredMessages: Message[] = storedContext.recentMessages.map((msg) => ({
@@ -162,15 +150,12 @@ export default function ChatInterface({
     setInputValue("");
     setIsLoading(true);
     setCurrentActions([]);
-    setCurrentQuests([]);
     setCurrentPathUnlocks([]);
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [...messages, userMessage].map((m) => ({
             role: m.role,
@@ -197,7 +182,6 @@ export default function ChatInterface({
         setMessages((prev) => [...prev, assistantMessage]);
         setCurrentScene(data.scene || null);
         setCurrentActions(data.actions || []);
-        setCurrentQuests(data.quests || []);
         setCurrentPathUnlocks(data.pathUnlocks || []);
         setPlaceholder(data.freeInputPlaceholder || "告诉我你的想法...");
         
@@ -206,6 +190,11 @@ export default function ChatInterface({
           try {
             const contextObj = JSON.parse(data.context);
             saveContextToStorage(contextObj);
+            
+            // 通知父组件任务更新
+            if (onQuestUpdate && contextObj.quests) {
+              onQuestUpdate(contextObj.quests);
+            }
           } catch (e) {
             console.error("Failed to save context:", e);
           }
@@ -233,7 +222,7 @@ export default function ChatInterface({
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, messages, context, onContextUpdate, onPathUnlock]);
+  }, [isLoading, messages, context, onContextUpdate, onPathUnlock, onQuestUpdate]);
 
   const handleActionClick = useCallback((action: Action) => {
     handleSendMessage(action.label);
@@ -274,7 +263,6 @@ export default function ChatInterface({
           ))}
         </AnimatePresence>
 
-        {/* Loading indicator */}
         {isLoading && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -282,10 +270,13 @@ export default function ChatInterface({
             className="flex justify-start"
           >
             <div className="bg-gray-700 rounded-2xl px-4 py-3">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                </div>
+                <span className="text-gray-400 text-sm">思考中...</span>
               </div>
             </div>
           </motion.div>
@@ -322,33 +313,6 @@ export default function ChatInterface({
               <div key={path.id} className="mb-2 last:mb-0">
                 <div className="text-white font-medium">{path.name}</div>
                 <div className="text-gray-300 text-sm mt-1">{path.description}</div>
-              </div>
-            ))}
-          </motion.div>
-        )}
-
-        {/* Quests */}
-        {currentQuests.length > 0 && !isLoading && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-indigo-900/50 border border-indigo-700 rounded-xl p-4"
-          >
-            <div className="text-indigo-300 text-sm font-medium mb-2">🎯 新任务解锁</div>
-            {currentQuests.map((quest) => (
-              <div key={quest.id} className="mb-2 last:mb-0">
-                <div className="text-white font-medium">{quest.title}</div>
-                <div className="text-gray-300 text-sm mt-1">{quest.description}</div>
-                <div className="flex items-center space-x-2 mt-2">
-                  <span className="text-xs text-gray-400">难度: {quest.difficulty}/5</span>
-                  <span className="text-xs text-gray-400">预计: {quest.estimatedMinutes}分钟</span>
-                </div>
-                <button
-                  onClick={() => onQuestAccept?.({ ...quest, status: "active" })}
-                  className="mt-2 text-indigo-400 hover:text-indigo-300 text-sm transition-colors"
-                >
-                  接受任务 →
-                </button>
               </div>
             ))}
           </motion.div>

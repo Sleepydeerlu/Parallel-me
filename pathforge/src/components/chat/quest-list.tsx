@@ -8,11 +8,10 @@ import type { Quest } from "@/lib/types";
 interface QuestListProps {
   quests: Quest[];
   onQuestClick?: (questId: string) => void;
-  onComplete?: (questId: string) => void;
   className?: string;
 }
 
-const QuestList = memo(function QuestList({ quests, onQuestClick, onComplete, className }: QuestListProps) {
+const QuestList = memo(function QuestList({ quests, onQuestClick, className }: QuestListProps) {
   const activeQuests = quests.filter((q) => q.status === "active");
   const completedQuests = quests.filter((q) => q.status === "completed");
 
@@ -37,6 +36,7 @@ const QuestList = memo(function QuestList({ quests, onQuestClick, onComplete, cl
       </div>
 
       <div className="space-y-2">
+        {/* Active quests */}
         {activeQuests.map((quest, index) => {
           const type = QUEST_TYPE_CONFIG[quest.type] || QUEST_TYPE_CONFIG.side;
 
@@ -61,34 +61,30 @@ const QuestList = memo(function QuestList({ quests, onQuestClick, onComplete, cl
                   <h4 className="text-white font-medium text-sm">{quest.title}</h4>
                   <p className="text-gray-400 text-xs mt-1">{quest.description}</p>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onComplete?.(quest.id);
-                  }}
-                  className="ml-2 text-green-400 hover:text-green-300 text-xs"
-                >
-                  完成
-                </button>
+                <div className="ml-2 flex items-center">
+                  <span className="text-xs text-yellow-400">进行中</span>
+                </div>
               </div>
             </motion.div>
           );
         })}
 
+        {/* Completed quests */}
         {completedQuests.length > 0 && (
           <div className="pt-2 border-t border-gray-700">
             <div className="text-gray-500 text-xs mb-2">已完成</div>
-            {completedQuests.slice(0, 3).map((quest) => (
+            {completedQuests.slice(0, 5).map((quest) => (
               <div
                 key={quest.id}
-                className="text-gray-500 text-sm line-through py-1"
+                className="flex items-center justify-between py-1"
               >
-                {quest.title}
+                <span className="text-gray-500 text-sm line-through">{quest.title}</span>
+                <span className="text-xs text-green-400">✓</span>
               </div>
             ))}
-            {completedQuests.length > 3 && (
+            {completedQuests.length > 5 && (
               <div className="text-gray-600 text-xs">
-                +{completedQuests.length - 3} 更多
+                +{completedQuests.length - 5} 更多
               </div>
             )}
           </div>

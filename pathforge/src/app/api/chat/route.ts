@@ -6,6 +6,7 @@ import {
   updateUserProfile,
   addPath,
   addQuest,
+  updateQuest,
   updateAttributes,
   updateEmotionalState,
   serializeContext,
@@ -16,7 +17,7 @@ import { checkRateLimit, getRateLimitHeaders, createRateLimitResponse } from "@/
 
 interface RequestBody {
   messages: { role: string; content: string }[];
-  context?: string; // 序列化的上下文
+  context?: string;
 }
 
 export async function POST(request: Request) {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 获取或创建上下文
+    // Get or create context
     let context: DialogueContext;
     if (serializedContext) {
       try {
@@ -51,16 +52,16 @@ export async function POST(request: Request) {
       context = createDialogueContext("anonymous");
     }
 
-    // 获取用户消息
+    // Get user message
     const lastUserMessage = messages[messages.length - 1];
     if (lastUserMessage.role !== "user") {
       return NextResponse.json(
         { error: "Last message must be from user" },
-        { status: 400 }
+        { status: 400, headers: getRateLimitHeaders(rateLimitResult) }
       );
     }
 
-    // 添加用户消息到上下文
+    // Add user message to context
     context = addMessage(context, {
       id: `msg_${Date.now()}`,
       role: "user",
@@ -68,10 +69,10 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString(),
     });
 
-    // 生成AI响应
+    // Generate AI response
     const aiResponse = await generateAIResponse(lastUserMessage.content, context);
 
-    // 添加AI响应到上下文
+    // Add AI response to context
     context = addMessage(context, {
       id: `msg_${Date.now() + 1}`,
       role: "assistant",
@@ -84,12 +85,12 @@ export async function POST(request: Request) {
       },
     });
 
-    // 更新属性
+    // Update attributes
     if (aiResponse.attributeChanges && Object.keys(aiResponse.attributeChanges).length > 0) {
       context = updateAttributes(context, aiResponse.attributeChanges);
     }
 
-    // 更新情感状态
+    // Update emotional state
     if (aiResponse.emotionalState) {
       context = updateEmotionalState(
         context,
@@ -98,15 +99,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // 更新用户画像
+    // Update user profile
     if (aiResponse.userProfileUpdates) {
       context = updateUserProfile(context, aiResponse.userProfileUpdates);
     }
 
-    // 处理路线解锁
+    // Handle path unlocks
     if (aiResponse.pathUnlocks && aiResponse.pathUnlocks.length > 0) {
       for (const pathUnlock of aiResponse.pathUnlocks) {
-        // 检查是否已经存在
         const existingPath = context.paths.find((p) => p.id === pathUnlock.id);
         if (!existingPath) {
           context = addPath(context, {
@@ -126,10 +126,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 处理任务生成
+    // Handle quest generation
     if (aiResponse.quests && aiResponse.quests.length > 0) {
       for (const quest of aiResponse.quests) {
-        // 检查是否已经存在
         const existingQuest = context.quests.find((q) => q.id === quest.id);
         if (!existingQuest) {
           context = addQuest(context, {
@@ -156,7 +155,17 @@ export async function POST(request: Request) {
       }
     }
 
-    // 序列化上下文
+    // Handle quest updates (model判断任务完成)
+    if (aiResponse.questUpdates && aiResponse.questUpdates.length > 0) {
+      for (const update of aiResponse.questUpdates) {
+        context = updateQuest(context, update.id, {
+          status: update.status as "completed" | "failed" | "abandoned",
+          completedAt: update.status === "completed" ? new Date().toISOString() : undefined,
+        });
+      }
+    }
+
+    // Serialize context
     const newSerializedContext = serializeContext(context);
 
     return NextResponse.json(

@@ -34,25 +34,9 @@ function PlayPageContent() {
     console.log("Action:", actionId);
   }, []);
 
-  const handleQuestAccept = useCallback((quest: Quest) => {
-    setQuests((prev) => {
-      if (prev.some((q) => q.id === quest.id)) {
-        return prev;
-      }
-      return [...prev, quest];
-    });
-  }, []);
-
-  const handleQuestComplete = useCallback((questId: string) => {
-    setQuests((prev) =>
-      prev.map((q) =>
-        q.id === questId ? { ...q, status: "completed" } : q
-      )
-    );
-    setAttributes((prev) => ({
-      ...prev,
-      execution: prev.execution + 1,
-    }));
+  // 从上下文中同步任务状态
+  const handleQuestUpdate = useCallback((updatedQuests: Quest[]) => {
+    setQuests(updatedQuests);
   }, []);
 
   const handlePathUnlock = useCallback((path: { id: string; name: string; description: string }) => {
@@ -129,8 +113,8 @@ function PlayPageContent() {
           <ChatInterface
             key={resetKey}
             onAction={handleAction}
-            onQuestAccept={handleQuestAccept}
             onPathUnlock={handlePathUnlock}
+            onQuestUpdate={handleQuestUpdate}
             onContextUpdate={handleContextUpdate}
             resetKey={resetKey}
           />
@@ -152,7 +136,6 @@ function PlayPageContent() {
             />
             <QuestList
               quests={quests}
-              onComplete={handleQuestComplete}
             />
             
             {/* Help */}
@@ -163,7 +146,7 @@ function PlayPageContent() {
                 <li>• 点击选项或自由输入</li>
                 <li>• 路线会随对话解锁</li>
                 <li>• 任务会在对话中产生</li>
-                <li>• 完成任务提升属性</li>
+                <li>• AI会自动判断任务完成</li>
               </ul>
             </div>
           </div>

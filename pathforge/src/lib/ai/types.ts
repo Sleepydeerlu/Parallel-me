@@ -71,6 +71,10 @@ export const AIResponseSchema = z.object({
   freeInputPlaceholder: z.string().default("告诉我你的想法..."),
   pathUnlocks: z.array(PathUnlockSchema).default([]),
   quests: z.array(DynamicQuestSchema).default([]),
+  questUpdates: z.array(z.object({
+    id: z.string(),
+    status: z.enum(["completed", "failed", "abandoned"]),
+  })).default([]),
   attributeChanges: z.object({
     courage: z.number().default(0),
     wisdom: z.number().default(0),
