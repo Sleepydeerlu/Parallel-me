@@ -2,7 +2,7 @@ import { AIResponse } from "./types";
 import { DialogueContext } from "./context";
 import { buildContextSummary } from "./context-manager";
 
-// 精简的系统提示词，减少token消耗
+// 精简的系统提示词
 const SYSTEM_PROMPT = `你是PathForge人生模拟器的AI向导。通过对话帮助用户探索人生可能。
 
 规则：
@@ -15,7 +15,7 @@ const SYSTEM_PROMPT = `你是PathForge人生模拟器的AI向导。通过对话�
 输出JSON格式：
 {
   "narrative": "场景描写和对话",
-  "scene": {"location":"","time":"","atmosphere":"","description":""},
+  "scene": {"location":"","time":"","atmosphere":"","description":"","characters":[]},
   "actions": [{"id":"","label":"","description":"","risk":"low"}],
   "freeInputPlaceholder": "提示文字",
   "pathUnlocks": [{"id":"","name":"","description":"","trigger":""}],
@@ -31,13 +31,10 @@ const SYSTEM_PROMPT = `你是PathForge人生模拟器的AI向导。通过对话�
 - questUpdates用于更新任务状态（当用户完成任务时）
 - 不要输出多余内容，只输出JSON`;
 
-export async function generateAIResponse(
-  userMessage: string,
-  context: DialogueContext
-): Promise<AIResponse> {
+// 构建消息数组
+function buildMessages(userMessage: string, context: DialogueContext) {
   const contextSummary = buildContextSummary(context);
-  
-  const messages = [
+  return [
     { role: "system" as const, content: SYSTEM_PROMPT },
     { role: "system" as const, content: `上下文：${contextSummary}` },
     ...context.recentMessages.slice(-10).map((msg) => ({
@@ -46,7 +43,14 @@ export async function generateAIResponse(
     })),
     { role: "user" as const, content: userMessage },
   ];
+}
 
+// 非流式响应
+export async function generateAIResponse(
+  userMessage: string,
+  context: DialogueContext
+): Promise<AIResponse> {
+  const messages = buildMessages(userMessage, context);
   const apiKey = process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
   const model = process.env.OPENAI_MODEL || "gpt-4";
@@ -89,66 +93,132 @@ export async function generateAIResponse(
   }
 }
 
-// 流式响应版本
+// 流式响应
 export async function generateAIResponseStream(
   userMessage: string,
   context: DialogueContext
 ): Promise<ReadableStream> {
-  const contextSummary = buildContextSummary(context);
-  
-  const messages = [
-    { role: "system" as const, content: SYSTEM_PROMPT },
-    { role: "system" as const, content: `上下文：${contextSummary}` },
-    ...context.recentMessages.slice(-10).map((msg) => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content,
-    })),
-    { role: "user" as const, content: userMessage },
-  ];
-
+  const messages = buildMessages(userMessage, context);
   const apiKey = process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
   const model = process.env.OPENAI_MODEL || "gpt-4";
 
+  // 如果没有API key，返回模拟的流式响应
   if (!apiKey || apiKey === "your-api-key") {
-    // 返回模拟的流式响应
-    const mockResponse = generateMockResponse(userMessage, context);
+    return createMockStream(userMessage, context);
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1500,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Stream API request failed:", response.status);
+      return createMockStream(userMessage, context);
+    }
+
+    // 处理流式响应
+    const reader = response.body?.getReader();
+    if (!reader) {
+      return createMockStream(userMessage, context);
+    }
+
     const encoder = new TextEncoder();
+    let buffer = "";
+
     return new ReadableStream({
-      start(controller) {
-        const json = JSON.stringify(mockResponse);
-        controller.enqueue(encoder.encode(`data: ${json}\n\n`));
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        controller.close();
+      async start(controller) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += new TextDecoder().decode(value);
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = line.slice(6).trim();
+                if (data === "[DONE]") {
+                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                } else {
+                  try {
+                    const parsed = JSON.parse(data);
+                    const content = parsed.choices?.[0]?.delta?.content;
+                    if (content) {
+                      // 发送增量内容
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({ content })}\n\n`)
+                      );
+                    }
+                  } catch {
+                    // 忽略解析错误
+                  }
+                }
+              }
+            }
+          }
+          controller.close();
+        } catch (error) {
+          console.error("Stream reading error:", error);
+          controller.error(error);
+        }
       },
     });
+  } catch (error) {
+    console.error("Error creating stream:", error);
+    return createMockStream(userMessage, context);
   }
-
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 1500,
-      stream: true,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
-  }
-
-  return response.body!;
 }
 
+// 创建模拟的流式响应
+function createMockStream(userMessage: string, context: DialogueContext): ReadableStream {
+  const mockResponse = generateMockResponse(userMessage, context);
+  const encoder = new TextEncoder();
+  const narrative = mockResponse.narrative;
+  
+  return new ReadableStream({
+    async start(controller) {
+      // 逐字发送narrative
+      for (let i = 0; i < narrative.length; i++) {
+        const char = narrative[i];
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ content: char })}\n\n`)
+        );
+        // 模拟延迟
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      
+      // 发送完整的JSON响应
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ 
+          done: true,
+          response: mockResponse 
+        })}\n\n`)
+      );
+      
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+}
+
+// 解析AI响应
 function parseAIResponse(content: string, userMessage: string, context: DialogueContext): AIResponse {
   try {
-    // 处理markdown格式的JSON
     let jsonContent = content;
     const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
@@ -158,14 +228,12 @@ function parseAIResponse(content: string, userMessage: string, context: Dialogue
     const parsed = JSON.parse(jsonContent);
     return validateAndNormalizeResponse(parsed);
   } catch (parseError) {
-    // 尝试提取JSON
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0]);
         return validateAndNormalizeResponse(parsed);
       } catch {
-        // 返回带原始叙述的响应
         return {
           narrative: content.replace(/```json\n?|\n?```/g, "").trim(),
           actions: [{ id: "continue", label: "继续", description: "继续对话", risk: "low" }],
@@ -182,6 +250,7 @@ function parseAIResponse(content: string, userMessage: string, context: Dialogue
   }
 }
 
+// 验证和标准化响应
 function validateAndNormalizeResponse(response: unknown): AIResponse {
   const res = response as Record<string, unknown>;
   return {
@@ -200,16 +269,17 @@ function validateAndNormalizeResponse(response: unknown): AIResponse {
   };
 }
 
+// 模拟响应
 function generateMockResponse(userMessage: string, context: DialogueContext): AIResponse {
   const lowerMessage = userMessage.toLowerCase();
 
   if (lowerMessage.includes("考研") || lowerMessage.includes("学业")) {
     return {
-      narrative: `你站在图书馆窗边，阳光洒在考研资料上。\n\n桌上放着两样东西：一份考研报名表，一封实习offer。\n\n你的心跳加速了。`,
-      scene: { location: "图书馆窗边", time: "下午三点", atmosphere: "温暖而迷茫", description: "窗外梧桐树叶飘落，桌上摊开着资料。", characters: [] },
+      narrative: `傍晚六点，你独自坐在学校图书馆的落地窗前。窗外的梧桐树叶开始泛黄，大四的学长学姐们抱着厚厚的考研资料匆匆走过。手机屏幕上还停留着刚才搜索的"计算机考研还是就业"的页面，各种观点让你更加混乱。\n\n你叹了口气，把手机翻过去扣在桌上。图书馆里很安静，偶尔传来翻书的沙沙声。你盯着窗外发呆，脑海中反复回荡着两个声音——"考研能提升学历和起点""三年工作经验比学历更重要"。\n\n咖啡已经凉了。你意识到，不能再这样无目的地纠结下去了。`,
+      scene: { location: "图书馆", time: "傍晚", atmosphere: "安静而迷茫", description: "窗外梧桐叶飘落，桌上摊开着考研资料。", characters: [] },
       actions: [
-        { id: "study", label: "翻开考研资料", description: "开始复习", risk: "low" },
-        { id: "work", label: "看看offer", description: "了解工作机会", risk: "low" },
+        { id: "study", label: "开始复习考研", description: "拿起资料开始准备", risk: "low" },
+        { id: "work", label: "看看招聘信息", description: "了解就业市场", risk: "low" },
       ],
       freeInputPlaceholder: "告诉我你的真实想法...",
       pathUnlocks: [

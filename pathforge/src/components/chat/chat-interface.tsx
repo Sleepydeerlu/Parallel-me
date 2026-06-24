@@ -85,6 +85,7 @@ export default function ChatInterface({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
   const [currentScene, setCurrentScene] = useState<Scene | null>(null);
   const [currentActions, setCurrentActions] = useState<Action[]>([]);
   const [currentPathUnlocks, setCurrentPathUnlocks] = useState<PathUnlock[]>([]);
@@ -98,7 +99,7 @@ export default function ChatInterface({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages, streamingContent, scrollToBottom]);
 
   const resetToWelcome = useCallback(() => {
     setMessages([WELCOME_MESSAGE]);
@@ -136,6 +137,7 @@ export default function ChatInterface({
     resetToWelcome();
   }, [resetKey, resetToWelcome]);
 
+  // 流式发送消息
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
 
@@ -149,9 +151,117 @@ export default function ChatInterface({
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
+    setStreamingContent("");
     setCurrentActions([]);
     setCurrentPathUnlocks([]);
 
+    try {
+      // 使用流式API
+      const response = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          context,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Stream request failed");
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No reader available");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullContent = "";
+      let jsonResponse: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6).trim();
+            
+            if (data === "[DONE]") {
+              // 流结束
+              break;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              
+              if (parsed.content) {
+                // 增量内容
+                fullContent += parsed.content;
+                setStreamingContent(fullContent);
+              } else if (parsed.done && parsed.response) {
+                // 完整响应
+                jsonResponse = parsed.response;
+              }
+            } catch {
+              // 忽略解析错误
+            }
+          }
+        }
+      }
+
+      // 处理完整响应
+      if (jsonResponse) {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: jsonResponse.narrative || fullContent,
+          timestamp: new Date(),
+          metadata: {
+            scene: jsonResponse.scene?.location,
+            emotion: jsonResponse.emotionalState?.primary,
+          },
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+        setStreamingContent("");
+        setCurrentScene(jsonResponse.scene || null);
+        setCurrentActions(jsonResponse.actions || []);
+        setCurrentPathUnlocks(jsonResponse.pathUnlocks || []);
+        setPlaceholder(jsonResponse.freeInputPlaceholder || "告诉我你的想法...");
+        
+        // 更新上下文
+        await updateContext(jsonResponse, userMessage);
+      } else if (fullContent) {
+        // 只有流式内容，没有完整JSON
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: fullContent,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setStreamingContent("");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      // 回退到非流式API
+      await handleSendMessageFallback(content, userMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoading, messages, context, messages]);
+
+  // 非流式回退
+  const handleSendMessageFallback = useCallback(async (content: string, userMessage: Message) => {
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -185,33 +295,10 @@ export default function ChatInterface({
         setCurrentPathUnlocks(data.pathUnlocks || []);
         setPlaceholder(data.freeInputPlaceholder || "告诉我你的想法...");
         
-        if (data.context) {
-          setContext(data.context);
-          try {
-            const contextObj = JSON.parse(data.context);
-            saveContextToStorage(contextObj);
-            
-            // 通知父组件任务更新
-            if (onQuestUpdate && contextObj.quests) {
-              onQuestUpdate(contextObj.quests);
-            }
-          } catch (e) {
-            console.error("Failed to save context:", e);
-          }
-        }
-        
-        if (data.contextStats) {
-          onContextUpdate?.(data.contextStats);
-        }
-        
-        if (data.pathUnlocks && data.pathUnlocks.length > 0) {
-          data.pathUnlocks.forEach((path: PathUnlock) => {
-            onPathUnlock?.(path);
-          });
-        }
+        await updateContext(data, userMessage);
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Fallback error:", error);
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         role: "assistant",
@@ -219,10 +306,35 @@ export default function ChatInterface({
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
-  }, [isLoading, messages, context, onContextUpdate, onPathUnlock, onQuestUpdate]);
+  }, [messages, context]);
+
+  // 更新上下文
+  const updateContext = useCallback(async (data: any, userMessage: Message) => {
+    if (data.context) {
+      setContext(data.context);
+      try {
+        const contextObj = JSON.parse(data.context);
+        saveContextToStorage(contextObj);
+        
+        if (onQuestUpdate && contextObj.quests) {
+          onQuestUpdate(contextObj.quests);
+        }
+      } catch (e) {
+        console.error("Failed to save context:", e);
+      }
+    }
+    
+    if (data.contextStats) {
+      onContextUpdate?.(data.contextStats);
+    }
+    
+    if (data.pathUnlocks && data.pathUnlocks.length > 0) {
+      data.pathUnlocks.forEach((path: PathUnlock) => {
+        onPathUnlock?.(path);
+      });
+    }
+  }, [onContextUpdate, onPathUnlock, onQuestUpdate]);
 
   const handleActionClick = useCallback((action: Action) => {
     handleSendMessage(action.label);
@@ -263,7 +375,26 @@ export default function ChatInterface({
           ))}
         </AnimatePresence>
 
-        {isLoading && (
+        {/* Streaming content */}
+        {isLoading && streamingContent && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-start"
+          >
+            <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-gray-700 text-gray-100">
+              <div className="whitespace-pre-wrap">{streamingContent}</div>
+              <div className="mt-2 flex items-center space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Loading indicator (no streaming content yet) */}
+        {isLoading && !streamingContent && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
