@@ -147,12 +147,20 @@ export async function generateAIResponseStream(
                 } else {
                   try {
                     const parsed = JSON.parse(data);
+                    // 处理Mimo API和OpenAI的流式响应格式
                     const content = parsed.choices?.[0]?.delta?.content;
+                    const reasoningContent = parsed.choices?.[0]?.delta?.reasoning_content;
+                    
                     if (content) {
                       fullContent += content;
                       // 发送增量内容用于实时显示
                       controller.enqueue(
                         encoder.encode(`data: ${JSON.stringify({ content, done: false })}\n\n`)
+                      );
+                    } else if (reasoningContent) {
+                      // 处理reasoning内容（可选显示）
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({ content: reasoningContent, done: false, isReasoning: true })}\n\n`)
                       );
                     }
                   } catch {
