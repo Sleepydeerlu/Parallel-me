@@ -41,15 +41,12 @@ next-env.d.ts
 
 # Planning and docs (don't include in repo)
 docs/
-*.md
-!README.md
-!CONTRIBUTING.md
-!LICENSE
+life-rpg-parallel-me-product-dev-doc.md
 
-# Test reports
-*_TEST*.md
-*_REPORT*.md
-*_RESULTS*.md
+# Test reports in pathforge
+pathforge/*_TEST*.md
+pathforge/*_REPORT*.md
+pathforge/*_RESULTS*.md
 
 # Compose files
 .codex/
